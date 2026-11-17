@@ -72,6 +72,8 @@ class AudioEngine(
     private val onRoute: (AudioRoute) -> Unit = {},
     /** A temporary choice of SPEAKER or EARPIECE that wins over headsets and settings; null follows them. */
     private val forced: () -> AudioRoute.Output? = { null },
+    /** Optional outgoing audio generated while PTT is held for a roger sign-off. */
+    private val toneFilter: ((ByteArray) -> ByteArray)? = null,
 ) {
     private val am = context.getSystemService(AudioManager::class.java)
     private val main = Handler(Looper.getMainLooper())
@@ -262,7 +264,8 @@ class AudioEngine(
                 }
                 if (off != buf.size) continue
                 val p = processor
-                io.capture(if (p != null && generation == g) p.capture(buf) else buf.copyOf())
+                val voice = if (p != null && generation == g) p.capture(buf) else buf.copyOf()
+                io.capture(toneFilter?.invoke(voice) ?: voice)
             }
         } catch (e: Exception) {
             Log.e(TAG, "capture", e)
