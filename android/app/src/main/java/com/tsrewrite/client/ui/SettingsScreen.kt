@@ -1,11 +1,20 @@
 package com.tsrewrite.client.ui
 
+import android.view.KeyEvent
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.gestures.scrollable
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.height
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -68,6 +77,7 @@ import java.io.File
 fun SettingsPage(store: Store, session: Session, onBack: () -> Unit) {
     val s by store.settings.collectAsState()
     val connected by session.server.collectAsState()
+    val learningPtt by session.learningExternalPtt.collectAsState()
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     fun update(f: (Settings) -> Settings) { store.updateSettings(f(store.settings.value)); session.applySettings() }
@@ -96,6 +106,106 @@ fun SettingsPage(store: Store, session: Session, onBack: () -> Unit) {
     Page("Settings", onBack) { pad ->
         Column(Modifier.padding(pad).verticalScroll(rememberScrollState()).padding(horizontal = 16.dp).padding(bottom = 40.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp)) {
+
+
+            Card("1. Thema kiezen") {
+                Hint("Schuif door de voorbeeldafbeeldingen. De app begint met het standaardthema.")
+                val ids = listOf("standard", "christmas", "27mc", "space")
+                val names = listOf("Standaard", "Kerst", "27MC", "Space")
+                val symbols = listOf("📻", "🎄 ❄️ 🎅", "🚛 📡 📻", "🪐 🚀 🌌")
+                val backgrounds = listOf(
+                    listOf(Color(0xFF101214), Color(0xFF183043)),
+                    listOf(Color(0xFF081F15), Color(0xFF87252E)),
+                    listOf(Color(0xFF1D1F1C), Color(0xFF8B531D)),
+                    listOf(Color(0xFF080D30), Color(0xFF5139A4))
+                )
+                val pager = rememberPagerState(
+                    initialPage = ids.indexOf(s.dgTheme).coerceAtLeast(0),
+                    pageCount = { ids.size }
+                )
+                HorizontalPager(
+                    state = pager,
+                    contentPadding = PaddingValues(horizontal = 38.dp),
+                    pageSpacing = 12.dp,
+                    modifier = Modifier.fillMaxWidth().height(258.dp)
+                ) { ix ->
+                    Column(
+                        Modifier.fillMaxSize().clip(RoundedCornerShape(18.dp))
+                            .background(Brush.verticalGradient(backgrounds[ix]))
+                            .border(2.dp, if (pager.currentPage == ix) Ts.Blue else Ts.Outline, RoundedCornerShape(18.dp))
+                            .padding(12.dp),
+                        verticalArrangement = Arrangement.SpaceBetween,
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Text("DG-TALK", color = Color.White, fontWeight = FontWeight.Bold)
+                        Text(symbols[ix], style = MaterialTheme.typography.headlineLarge)
+                        Column(verticalArrangement = Arrangement.spacedBy(5.dp)) {
+                            repeat(5) { row ->
+                                Text(
+                                    listOf("TS-HEERLEN", "└ Algemeen", "└ Radio-kanalen", "  • Gebruikers", "└ Lounge")[row],
+                                    color = Color.White.copy(alpha = if (row == 0) 1f else .75f),
+                                    style = MaterialTheme.typography.bodySmall
+                                )
+                            }
+                        }
+                        Box(
+                            Modifier.fillMaxWidth().background(
+                                if (ix == 1) Color(0xFF168547) else if (ix == 2) Color(0xFFD58A30)
+                                else if (ix == 3) Color(0xFF397DE8) else Color(0xFF1A91D0),
+                                RoundedCornerShape(25.dp)
+                            ).padding(10.dp), contentAlignment = Alignment.Center
+                        ) {
+                            Text("Push to talk", color = Color.White, style = MaterialTheme.typography.labelLarge)
+                        }
+                    }
+                }
+                Text(names[pager.currentPage], color = Ts.Blue, fontWeight = FontWeight.SemiBold)
+                Button(
+                    onClick = { update { it.copy(dgTheme = ids[pager.currentPage]) } },
+                    enabled = s.dgTheme != ids[pager.currentPage],
+                    modifier = Modifier.fillMaxWidth()
+                ) { Text(if (s.dgTheme == ids[pager.currentPage]) "Geselecteerd" else "Thema toepassen") }
+                Hint("Alleen kleuren en versiering veranderen. De bestaande bediening blijft hetzelfde.")
+            }
+
+            Card("2. Externe PTT-knop") {
+                Toggle("Externe PTT inschakelen", "Een knop op een Android-portofoon of Bluetooth-apparaat gebruiken", s.externalPttEnabled) {
+                    update { old -> old.copy(externalPttEnabled = it) }
+                }
+                if (s.externalPttKeyCode != 0) {
+                    Hint("Gekozen toets: ${KeyEvent.keyCodeToString(s.externalPttKeyCode)}")
+                } else Hint("Er is nog geen fysieke PTT-toets ingesteld.")
+                OutlinedButton(
+                    onClick = { if (learningPtt) session.cancelLearnExternalPtt() else session.learnExternalPtt() },
+                    modifier = Modifier.fillMaxWidth()
+                ) { Text(if (learningPtt) "Annuleren" else "Fysieke knop instellen") }
+                if (learningPtt) Hint("Druk nu op de zijknop van je Android-portofoon of je Bluetooth-PTT-knop.")
+                if (s.externalPttKeyCode != 0) {
+                    OutlinedButton(onClick = {
+                        session.releaseExternalPtt()
+                        update { it.copy(externalPttKeyCode = 0, externalPttEnabled = false) }
+                    }) { Text("Koppeling verwijderen") }
+                }
+                Hint("Ingedrukt = TX, loslaten = RX. Werkt met knoppen die Android als toets-event doorgeeft; speciale fabrikantknoppen kunnen extra ondersteuning vereisen.")
+            }
+
+            Card("3. Rogerpiep – 3 tonen") {
+                Toggle(
+                    "3-tonige rogerpiep",
+                    "Na loslaten van PTT wordt de piep meegestuurd in het TeamSpeak-kanaal",
+                    s.rogerBeep
+                ) { on -> update { it.copy(rogerBeep = on) } }
+                OutlinedButton(
+                    onClick = {
+                        if (!session.testRogerBeep()) {
+                            Toast.makeText(context, "Verbind eerst met TeamSpeak, kies PTT en zet de microfoon aan", Toast.LENGTH_LONG).show()
+                        }
+                    },
+                    enabled = connected != null && s.voiceMode == VoiceMode.PUSH_TO_TALK,
+                    modifier = Modifier.fillMaxWidth()
+                ) { Text("Test 3-tonige piep in kanaal") }
+                Hint("De test zendt drie tonen naar andere gebruikers in hetzelfde kanaal. Je hoort je eigen uitzending normaal niet via dezelfde TeamSpeak-verbinding.")
+            }
 
             Card("Updates") {
                 val updater = (context.applicationContext as com.tsrewrite.client.App).updater
