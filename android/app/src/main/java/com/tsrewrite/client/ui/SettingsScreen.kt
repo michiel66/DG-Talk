@@ -112,12 +112,11 @@ fun SettingsPage(store: Store, session: Session, onBack: () -> Unit) {
                 Hint("Schuif door de voorbeeldafbeeldingen. De app begint met het standaardthema.")
                 val ids = listOf("standard", "christmas", "27mc", "space")
                 val names = listOf("Standaard", "Kerst", "27MC", "Space")
-                val symbols = listOf("📻", "🎄 ❄️ 🎅", "🚛 📡 📻", "🪐 🚀 🌌")
-                val backgrounds = listOf(
-                    listOf(Color(0xFF101214), Color(0xFF183043)),
-                    listOf(Color(0xFF081F15), Color(0xFF87252E)),
-                    listOf(Color(0xFF1D1F1C), Color(0xFF8B531D)),
-                    listOf(Color(0xFF080D30), Color(0xFF5139A4))
+                val previews = listOf(
+                    com.tsrewrite.client.R.drawable.dg_theme_standard_preview,
+                    com.tsrewrite.client.R.drawable.dg_theme_christmas_preview,
+                    com.tsrewrite.client.R.drawable.dg_theme_27mc_preview,
+                    com.tsrewrite.client.R.drawable.dg_theme_space_preview
                 )
                 val pager = rememberPagerState(
                     initialPage = ids.indexOf(s.dgTheme).coerceAtLeast(0),
@@ -129,37 +128,28 @@ fun SettingsPage(store: Store, session: Session, onBack: () -> Unit) {
                     pageSpacing = 12.dp,
                     modifier = Modifier.fillMaxWidth().height(258.dp)
                 ) { ix ->
-                    Column(
+                    Box(
                         Modifier.fillMaxSize().clip(RoundedCornerShape(18.dp))
-                            .background(Brush.verticalGradient(backgrounds[ix]))
-                            .border(2.dp, if (pager.currentPage == ix) Ts.Blue else Ts.Outline, RoundedCornerShape(18.dp))
-                            .padding(12.dp),
-                        verticalArrangement = Arrangement.SpaceBetween,
-                        horizontalAlignment = Alignment.CenterHorizontally
+                            .background(Ts.SurfaceHigh)
+                            .border(2.dp, if (pager.currentPage == ix) Ts.Blue else Ts.Outline, RoundedCornerShape(18.dp)),
+                        contentAlignment = Alignment.Center
                     ) {
-                        Text("DG-TALK", color = Color.White, fontWeight = FontWeight.Bold)
-                        Text(symbols[ix], style = MaterialTheme.typography.headlineLarge)
-                        Column(verticalArrangement = Arrangement.spacedBy(5.dp)) {
-                            repeat(5) { row ->
-                                Text(
-                                    listOf("TS-HEERLEN", "└ Algemeen", "└ Radio-kanalen", "  • Gebruikers", "└ Lounge")[row],
-                                    color = Color.White.copy(alpha = if (row == 0) 1f else .75f),
-                                    style = MaterialTheme.typography.bodySmall
-                                )
-                            }
-                        }
+                        Image(
+                            painter = androidx.compose.ui.res.painterResource(previews[ix]),
+                            contentDescription = "Voorbeeld " + names[ix],
+                            modifier = Modifier.height(246.dp).padding(4.dp),
+                            contentScale = ContentScale.Fit
+                        )
                         Box(
-                            Modifier.fillMaxWidth().background(
-                                if (ix == 1) Color(0xFF168547) else if (ix == 2) Color(0xFFD58A30)
-                                else if (ix == 3) Color(0xFF397DE8) else Color(0xFF1A91D0),
-                                RoundedCornerShape(25.dp)
-                            ).padding(10.dp), contentAlignment = Alignment.Center
+                            Modifier.align(Alignment.BottomCenter).fillMaxWidth()
+                                .background(Color(0xE0000000)).padding(6.dp),
+                            contentAlignment = Alignment.Center
                         ) {
-                            Text("Push to talk", color = Color.White, style = MaterialTheme.typography.labelLarge)
+                            Text(names[ix], color = Color.White, fontWeight = FontWeight.SemiBold)
                         }
                     }
                 }
-                Text(names[pager.currentPage], color = Ts.Blue, fontWeight = FontWeight.SemiBold)
+                                Text(names[pager.currentPage], color = Ts.Blue, fontWeight = FontWeight.SemiBold)
                 Button(
                     onClick = { update { it.copy(dgTheme = ids[pager.currentPage]) } },
                     enabled = s.dgTheme != ids[pager.currentPage],
