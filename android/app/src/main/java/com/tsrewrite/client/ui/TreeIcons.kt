@@ -47,7 +47,22 @@ private val ChannelRed = Color(0xFFE5534B)
 
 /** Flat speech bubble; hollow when not subscribed. */
 @Composable
-fun ChannelIcon(state: ChannelState, subscribed: Boolean, size: Dp) {
+fun ChannelIcon(state: ChannelState, subscribed: Boolean, size: Dp, channelSeed: Int = 0) {
+    // Theme icons replace only normal open-channel symbols: locked/full status stays clear.
+    if (state == ChannelState.OPEN) {
+        val symbols = when (Ts.ThemeName) {
+            "christmas" -> listOf("🎄", "🎅", "⛄", "🎁", "❄️")
+            "27mc" -> listOf("📻", "📡", "🚛")
+            "space" -> listOf("🪐", "🚀", "🌟", "🛰️")
+            else -> emptyList()
+        }
+        if (symbols.isNotEmpty()) {
+            Box(Modifier.size(size), contentAlignment = Alignment.Center) {
+                Text(symbols[Math.floorMod(channelSeed, symbols.size)], fontSize = (size.value * 0.88f).sp)
+            }
+            return
+        }
+    }
     val color = when (state) { ChannelState.OPEN -> ChannelBlue; ChannelState.PASSWORD -> ChannelAmber; ChannelState.FULL -> ChannelRed }
     Canvas(Modifier.size(size)) {
         val u = this.size.width / 16f
@@ -60,7 +75,20 @@ fun ChannelIcon(state: ChannelState, subscribed: Boolean, size: Dp) {
 }
 
 @Composable
-fun ServerIcon(size: Dp) = Icon(Icons.Rounded.Dns, null, tint = Ts.Blue, modifier = Modifier.size(size))
+@Composable
+fun ServerIcon(size: Dp) {
+    val symbol = when (Ts.ThemeName) {
+        "christmas" -> "🎄"
+        "27mc" -> "📻"
+        "space" -> "🪐"
+        else -> null
+    }
+    if (symbol != null) {
+        Box(Modifier.size(size), contentAlignment = Alignment.Center) {
+            Text(symbol, fontSize = (size.value * 0.88f).sp)
+        }
+    } else Icon(Icons.Rounded.Dns, null, tint = Ts.Blue, modifier = Modifier.size(size))
+}
 
 enum class ClientState { IDLE, TALKING, WHISPERING, AWAY, INPUT_MUTED, OUTPUT_MUTED, HW_INPUT_OFF, HW_OUTPUT_OFF, QUERY }
 
