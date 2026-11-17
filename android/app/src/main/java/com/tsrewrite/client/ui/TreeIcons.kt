@@ -75,7 +75,6 @@ fun ChannelIcon(state: ChannelState, subscribed: Boolean, size: Dp, channelSeed:
 }
 
 @Composable
-@Composable
 fun ServerIcon(size: Dp) {
     val symbol = when (Ts.ThemeName) {
         "christmas" -> "🎄"
