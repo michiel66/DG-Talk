@@ -5,6 +5,8 @@ on:
     branches: [main]
     paths:
       - '.github/workflows/dg-talk-apk.yml'
+      - 'android/**'
+      - 'tools/dg-talk-brand.py'
   workflow_dispatch:
 
 permissions:
