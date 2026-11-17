@@ -44,7 +44,10 @@ class MainActivity : ComponentActivity() {
         if (Build.VERSION.SDK_INT >= 31) perms += Manifest.permission.BLUETOOTH_CONNECT
         registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) {}.launch(perms.toTypedArray())
         handleLink(intent)
-        setContent { TsTheme { Root(app) } }
+        setContent {
+            val appearance by app.store.settings.collectAsState()
+            TsTheme(appearance.dgTheme) { Root(app) }
+        }
     }
 
     override fun onNewIntent(intent: Intent) {
@@ -57,13 +60,26 @@ class MainActivity : ComponentActivity() {
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
         val s = app.store.settings.value
         val connected = app.session.status.value.first == Status.CONNECTED
+        if (app.session.handleExternalPtt(event)) return true
         if (connected && s.volumeKeyPtt && s.voiceMode == VoiceMode.PUSH_TO_TALK &&
             (event.keyCode == KeyEvent.KEYCODE_VOLUME_UP || event.keyCode == KeyEvent.KEYCODE_VOLUME_DOWN)
         ) {
-            if (event.repeatCount == 0) app.session.client.setPushToTalk(event.action == KeyEvent.ACTION_DOWN)
+            if (event.repeatCount == 0) {
+                when (event.action) {
+                    KeyEvent.ACTION_DOWN -> app.session.setPushToTalk(true, "volume:${event.keyCode}")
+                    KeyEvent.ACTION_UP -> app.session.setPushToTalk(false, "volume:${event.keyCode}")
+                }
+            }
             return true
         }
         return super.dispatchKeyEvent(event)
+    }
+
+    override fun onStop() {
+        super.onStop()
+        // If a vendor does not forward a release event when an Activity loses focus,
+        // fail closed: never leave an external PTT transmission latched on.
+        app.session.releaseExternalPtt()
     }
 
     private fun handleLink(intent: Intent?) {
