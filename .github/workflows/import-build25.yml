@@ -1,0 +1,48 @@
+name: Import original TeamSpeak Android build-25 into DG-Talk
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/import-build25.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  import-and-brand:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout DG-Talk
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+
+      - name: Copy exact working upstream build-25 sources and assets
+        shell: bash
+        run: |
+          set -euo pipefail
+          tmp="$(mktemp -d)"
+          git clone --quiet --depth 1 --branch build-25 https://github.com/NotMurPh/TeamSpeak-Android-TS3.git "$tmp/upstream"
+          actual="$(git -C "$tmp/upstream" rev-parse HEAD)"
+          test "$actual" = "dafbab92037b3ae135e494319dd4016fdcb1f2b9"
+          # Preserve our own import script and build workflow. Do not import the
+          # upstream's release workflow: it requires private signing credentials.
+          rsync -a --exclude='.git' --exclude='.github/workflows/release.yml' "$tmp/upstream/" ./
+          python3 tools/dg-talk-brand.py
+
+      - name: Commit complete DG-Talk Android source to main
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          if git diff --cached --quiet; then
+            echo "No changes to commit."
+            exit 0
+          fi
+          git commit -m "Import complete TeamSpeak Android build-25 and brand as DG-Talk"
+          git push origin HEAD:main
