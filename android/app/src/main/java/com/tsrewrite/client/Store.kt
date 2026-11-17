@@ -47,6 +47,13 @@ data class Settings(
     val volumeKeyPtt: Boolean = false,
     val headsetButtonPtt: Boolean = false,
     val pttToggle: Boolean = false,
+    /** Saved appearance. Fresh installs retain the original TeamSpeak UI. */
+    val dgTheme: String = "standard",
+    val externalPttEnabled: Boolean = false,
+    /** Physical Android / Bluetooth key learned from a KeyEvent; 0 means unassigned. */
+    val externalPttKeyCode: Int = 0,
+    /** Send a three-tone sign-off over outgoing TeamSpeak voice on PTT release. */
+    val rogerBeep: Boolean = false,
     val announceEvents: Boolean = true,
     val playSounds: Boolean = true,
     val vibrateOnPoke: Boolean = true,
@@ -183,6 +190,8 @@ class Store(private val context: Context) {
             put("defaultIdentityId", s.defaultIdentityId); put("defaultNickname", s.defaultNickname)
             put("echoCancel", s.echoCancel); put("noiseSuppression", s.noiseSuppression); put("autoGain", s.autoGain)
             put("volumeKeyPtt", s.volumeKeyPtt); put("headsetButtonPtt", s.headsetButtonPtt); put("pttToggle", s.pttToggle)
+            put("dgTheme", s.dgTheme); put("externalPttEnabled", s.externalPttEnabled)
+            put("externalPttKeyCode", s.externalPttKeyCode); put("rogerBeep", s.rogerBeep)
             put("announceEvents", s.announceEvents); put("playSounds", s.playSounds); put("vibrateOnPoke", s.vibrateOnPoke)
             put("systemNotifications", s.systemNotifications); put("autoReconnect", s.autoReconnect)
             put("keepScreenOn", s.keepScreenOn); put("blockWhispers", s.blockWhispers); put("showFlags", s.showFlags)
@@ -244,6 +253,10 @@ class Store(private val context: Context) {
             volumeKeyPtt = o.optBoolean("volumeKeyPtt", d.volumeKeyPtt),
             headsetButtonPtt = o.optBoolean("headsetButtonPtt", d.headsetButtonPtt),
             pttToggle = o.optBoolean("pttToggle", d.pttToggle),
+            dgTheme = o.optString("dgTheme", d.dgTheme).takeIf { it in listOf("standard", "christmas", "27mc", "space") } ?: "standard",
+            externalPttEnabled = o.optBoolean("externalPttEnabled", d.externalPttEnabled),
+            externalPttKeyCode = o.optInt("externalPttKeyCode", d.externalPttKeyCode),
+            rogerBeep = o.optBoolean("rogerBeep", d.rogerBeep),
             announceEvents = o.optBoolean("announceEvents", d.announceEvents),
             playSounds = o.optBoolean("playSounds", d.playSounds),
             vibrateOnPoke = o.optBoolean("vibrateOnPoke", d.vibrateOnPoke),
