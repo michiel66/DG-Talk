@@ -38,10 +38,12 @@ object Ts {
     var Purple by mutableStateOf(Color(0xFFAB47BC)); private set
     var Selection by mutableStateOf(Color(0x331A91D0)); private set
 
+    var ThemeName by mutableStateOf("standard"); private set
     private var current = "standard"
     fun useTheme(name: String) {
         if (current == name) return
         current = name
+        ThemeName = name
         when (name) {
             "christmas" -> {
                 Blue = Color(0xFFD83746); BlueDim = Color(0xFFAF2937)
