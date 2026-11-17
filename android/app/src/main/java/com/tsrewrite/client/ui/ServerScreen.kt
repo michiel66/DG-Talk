@@ -349,11 +349,11 @@ private fun VoiceDock(session: Session, store: Store) {
                         ptt && whisper == null && inMuted -> Modifier // disabled while muted
                         ptt -> Modifier.pointerInput(settings.pttToggle, inMuted) {
                             detectTapGestures(onPress = {
-                                if (settings.pttToggle) { toggled = !toggled; session.client.setPushToTalk(toggled) }
+                                if (settings.pttToggle) { toggled = !toggled; session.setPushToTalk(toggled, "screen") }
                                 else {
-                                    pressed = true; session.client.setPushToTalk(true)
+                                    pressed = true; session.setPushToTalk(true, "screen")
                                     tryAwaitRelease()
-                                    pressed = false; session.client.setPushToTalk(false)
+                                    pressed = false; session.setPushToTalk(false, "screen")
                                 }
                             })
                         }
