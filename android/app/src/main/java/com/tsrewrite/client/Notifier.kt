@@ -23,9 +23,13 @@ object Notifier {
             context.checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS) !=
             android.content.pm.PackageManager.PERMISSION_GRANTED) return
         val nm = context.getSystemService(NotificationManager::class.java)
-        nm.createNotificationChannel(NotificationChannel(CHANNEL, "Messages and pokes", NotificationManager.IMPORTANCE_HIGH))
+        if (android.os.Build.VERSION.SDK_INT >= 26) {
+            nm.createNotificationChannel(NotificationChannel(CHANNEL, "Messages and pokes", NotificationManager.IMPORTANCE_HIGH))
+        }
         val open = PendingIntent.getActivity(context, 0, Intent(context, MainActivity::class.java), PendingIntent.FLAG_IMMUTABLE)
-        nm.notify(nextId++, Notification.Builder(context, CHANNEL)
+        val builder = if (android.os.Build.VERSION.SDK_INT >= 26) Notification.Builder(context, CHANNEL)
+            else Notification.Builder(context).setPriority(Notification.PRIORITY_HIGH)
+        nm.notify(nextId++, builder
             .setSmallIcon(R.drawable.ic_notification)
             .setContentTitle(title)
             .setContentText(text)
