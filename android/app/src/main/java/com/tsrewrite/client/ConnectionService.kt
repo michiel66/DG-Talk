@@ -127,7 +127,9 @@ class ConnectionService : Service() {
             setInt(R.id.notif_disconnect, "setColorFilter", red)
             setOnClickPendingIntent(R.id.notif_disconnect, tap(ACTION_DISCONNECT, 1))
         }
-        return Notification.Builder(this, CHANNEL)
+        val builder = if (android.os.Build.VERSION.SDK_INT >= 26) Notification.Builder(this, CHANNEL)
+            else Notification.Builder(this).setPriority(Notification.PRIORITY_LOW)
+        return builder
             .setSmallIcon(R.drawable.ic_notification)
             .setContentTitle(title)
             .setContentText(text)
@@ -141,7 +143,9 @@ class ConnectionService : Service() {
 
     private fun goForeground() {
         val nm = getSystemService(NotificationManager::class.java)
-        nm.createNotificationChannel(NotificationChannel(CHANNEL, "Connection", NotificationManager.IMPORTANCE_LOW))
+        if (android.os.Build.VERSION.SDK_INT >= 26) {
+            nm.createNotificationChannel(NotificationChannel(CHANNEL, "Connection", NotificationManager.IMPORTANCE_LOW))
+        }
         val n = notification()
         if (android.os.Build.VERSION.SDK_INT >= 29) {
             val type = if (android.os.Build.VERSION.SDK_INT >= 30 &&
