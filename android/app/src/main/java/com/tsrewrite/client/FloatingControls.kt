@@ -88,8 +88,11 @@ class FloatingControls(private val context: Context, private val session: Sessio
         if (pttToggled) { pttToggled = false; session.client.setPushToTalk(false) }
     }
 
+    @Suppress("DEPRECATION")
     private fun overlayParams(w: Int, h: Int, touchable: Boolean) = WindowManager.LayoutParams(
-        w, h, WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
+        w, h,
+        if (Build.VERSION.SDK_INT >= 26) WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
+        else WindowManager.LayoutParams.TYPE_PHONE,
         WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN or
             (if (touchable) 0 else WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE),
         PixelFormat.TRANSLUCENT,
