@@ -177,10 +177,10 @@ class ConnectionService : Service() {
     override fun onDestroy() {
         scope.cancel()
         floating?.stop()
+        val app = application as App
         if (headsetTalking) app.session.setPushToTalk(false, "headset")
         app.session.releaseExternalPtt()
         media?.release()
-        val app = application as App
         app.session.stopAudio()
         wakeLock?.release()
         wifiLock?.let { if (it.isHeld) it.release() }
