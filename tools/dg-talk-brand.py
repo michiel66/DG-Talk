@@ -90,22 +90,56 @@ write(app + "res/drawable/dg_talk_launcher_monochrome.xml", """<?xml version="1.
 """)
 edit("tools/release.ps1", '$applicationId = "com.tsrewrite.client"', '$applicationId = "nl.dg.talk"')
 edit("tools/release.ps1", '$assetName = "teamspeak-android-arm64-v8a.apk"', '$assetName = "DG-Talk-arm64-v8a.apk"')
-write("README.md", """# DG-Talk
+# The original source targets Android 8 / ARM64. DG-Talk supports Android 7 / ARMv7 too.
+edit("android/app/build.gradle.kts", "minSdk = 26", "minSdk = 24")
+edit("android/app/build.gradle.kts",
+     'ndk { abiFilters += listOf("arm64-v8a") }',
+     'ndk { abiFilters += listOf("arm64-v8a", "armeabi-v7a") }')
+edit("android/settings.gradle.kts", 'rootProject.name = "TSClient"', 'rootProject.name = "DG-Talk"')
+edit("rust-toolchain.toml", 'targets = ["aarch64-linux-android"]',
+     'targets = ["aarch64-linux-android", "armv7-linux-androideabi"]')
+edit("tools/build-core.ps1", 'param([string[]]$Abis = @("arm64-v8a"))',
+     'param([string[]]$Abis = @("arm64-v8a", "armeabi-v7a"))')
+edit("tools/build-core.ps1", 'cargo ndk @targets -P 26 -o',
+     'cargo ndk @targets -P 24 -o')
 
-DG-Talk is een Android TeamSpeak 3-client met een **eigen appnaam, eigen radio-icoon en Heerlen als standaardserver**.
+connection = app + "java/com/tsrewrite/client/ConnectionService.kt"
+edit(connection, 'return Notification.Builder(this, CHANNEL)',
+     'val builder = if (android.os.Build.VERSION.SDK_INT >= 26) Notification.Builder(this, CHANNEL)\n'
+     '            else Notification.Builder(this).setPriority(Notification.PRIORITY_LOW)\n'
+     '        return builder')
+edit(connection,
+     'nm.createNotificationChannel(NotificationChannel(CHANNEL, "Connection", NotificationManager.IMPORTANCE_LOW))',
+     'if (android.os.Build.VERSION.SDK_INT >= 26) {\n'
+     '            nm.createNotificationChannel(NotificationChannel(CHANNEL, "Connection", NotificationManager.IMPORTANCE_LOW))\n'
+     '        }')
+edit(connection,
+     'setContentDescription(R.id.notif_mute, if (mic) "Unmute microphone" else "Mute microphone")',
+     'setCharSequence(R.id.notif_mute, "setContentDescription", if (mic) "Unmute microphone" else "Mute microphone")')
+edit(connection,
+     'setContentDescription(R.id.notif_deafen, if (sound) "Undeafen" else "Deafen")',
+     'setCharSequence(R.id.notif_deafen, "setContentDescription", if (sound) "Undeafen" else "Deafen")')
 
-- **Naam:** DG-Talk
-- **Standaardserver:** \`heerlen.mijnts3.nl\`
-- **Android-pakket:** \`nl.dg.talk\` (installeerbaar naast de originele TS Client)
-- **Basis:** [NotMurPh/TeamSpeak-Android-TS3](https://github.com/NotMurPh/TeamSpeak-Android-TS3), release **build-25** op commit \`dafbab92037b3ae135e494319dd4016fdcb1f2b9\`.
-- **Interface, PTT, spraak, audiobediening en TeamSpeak 3-protocol:** origineel behouden.
+notifier = app + "java/com/tsrewrite/client/Notifier.kt"
+edit(notifier, 'nm.createNotificationChannel(NotificationChannel(CHANNEL, "Messages and pokes", NotificationManager.IMPORTANCE_HIGH))',
+     'if (android.os.Build.VERSION.SDK_INT >= 26) {\n'
+     '            nm.createNotificationChannel(NotificationChannel(CHANNEL, "Messages and pokes", NotificationManager.IMPORTANCE_HIGH))\n'
+     '        }')
+edit(notifier, 'nm.notify(nextId++, Notification.Builder(context, CHANNEL)',
+     'val builder = if (android.os.Build.VERSION.SDK_INT >= 26) Notification.Builder(context, CHANNEL)\n'
+     '            else Notification.Builder(context).setPriority(Notification.PRIORITY_HIGH)\n'
+     '        nm.notify(nextId++, builder')
 
-## APK maken
-Open de GitHub Actions-tab en voer **DG-Talk Android APK** uit. Download vervolgens het APK-artifact van de geslaagde workflowrun.
+overlay = app + "java/com/tsrewrite/client/FloatingControls.kt"
+edit(overlay,
+     '    private fun overlayParams(w: Int, h: Int, touchable: Boolean) = WindowManager.LayoutParams(',
+     '    @Suppress("DEPRECATION")\n'
+     '    private fun overlayParams(w: Int, h: Int, touchable: Boolean) = WindowManager.LayoutParams(')
+edit(overlay, 'w, h, WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,',
+     'w, h,\n'
+     '        if (Build.VERSION.SDK_INT >= 26) WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY\n'
+     '        else WindowManager.LayoutParams.TYPE_PHONE,')
 
-## Bronvermelding en licenties
-De oorspronkelijke applicatiecode wordt gebruikt volgens de MIT-licentie. De originele \`LICENSE\` en \`THIRD_PARTY.md\` en overige meegeleverde licentiebestanden blijven in deze repository aanwezig. DG-Talk is geen officiële TeamSpeak-app en wordt niet ondersteund door TeamSpeak.
+# README.md is intentionally maintained separately, without being overwritten by branding.
 
-Bij een eigen distributie gelden ook de licenties en merkrechten voor alle meegeleverde afhankelijkheden en assets.
-""")
 print("DG-Talk branding applied, original microphone/PTT and UI code retained.")
