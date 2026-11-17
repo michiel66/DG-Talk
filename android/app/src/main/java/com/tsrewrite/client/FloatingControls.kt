@@ -85,7 +85,7 @@ class FloatingControls(private val context: Context, private val session: Sessio
         bubble?.let { runCatching { wm.removeView(it) } }
         bubble = null
         hideTarget()
-        if (pttToggled) { pttToggled = false; session.client.setPushToTalk(false) }
+        if (pttToggled) { pttToggled = false; session.setPushToTalk(false, "floating") }
     }
 
     @Suppress("DEPRECATION")
@@ -187,13 +187,13 @@ class FloatingControls(private val context: Context, private val session: Sessio
                 when (e.actionMasked) {
                     MotionEvent.ACTION_DOWN -> {
                         v.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
-                        if (!s.pttToggle) session.client.setPushToTalk(true)
+                        if (!s.pttToggle) session.setPushToTalk(true, "floating")
                         v.animate().scaleX(0.9f).scaleY(0.9f).setDuration(80).start()
                     }
                     // A drag from this button arrives as CANCEL: a hold stops talking, a toggle does not flip.
                     MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
-                        if (!s.pttToggle) session.client.setPushToTalk(false)
-                        else if (e.actionMasked == MotionEvent.ACTION_UP) { pttToggled = !pttToggled; session.client.setPushToTalk(pttToggled) }
+                        if (!s.pttToggle) session.setPushToTalk(false, "floating")
+                        else if (e.actionMasked == MotionEvent.ACTION_UP) { pttToggled = !pttToggled; session.setPushToTalk(pttToggled, "floating") }
                         v.animate().scaleX(1f).scaleY(1f).setDuration(120).start()
                     }
                 }
