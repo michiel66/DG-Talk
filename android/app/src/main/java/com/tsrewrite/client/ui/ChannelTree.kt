@@ -141,7 +141,7 @@ fun ChannelTree(
                             val full = c.maxClients >= 0 && c.clientCount.toInt() >= c.maxClients
                             ChannelIcon(
                                 when { full -> ChannelState.FULL; c.hasPassword -> ChannelState.PASSWORD; else -> ChannelState.OPEN },
-                                c.subscribed || c.id == v.ownChannelId, m.icon,
+                                c.subscribed || c.id == v.ownChannelId, m.icon, c.id.toInt(),
                             )
                             Spacer(Modifier.width(m.textStart - m.iconStart - m.icon))
                             Text(TsText.of(c.name), style = style, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
