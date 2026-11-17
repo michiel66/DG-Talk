@@ -199,6 +199,14 @@ class Session(private val context: Context, private val store: Store) : EventLis
 
     fun applySettings() {
         val s = store.settings.value
+        if (s.voiceMode != uniffi.tscore.VoiceMode.PUSH_TO_TALK) {
+            synchronized(pttLock) {
+                pttGeneration++
+                pttHolders.clear()
+                rogerTone.cancel()
+                client.setPushToTalk(false)
+            }
+        }
         client.setVoiceMode(s.voiceMode)
         client.setVadThreshold(s.vadThreshold)
         client.setMicGain(s.micGain)
@@ -263,11 +271,22 @@ class Session(private val context: Context, private val store: Store) : EventLis
         // Caller holds pttLock. Callback runs on the dedicated audio thread.
         rogerTone.start {
             scope.launch {
+                // Allow native audio frames to flush before ending TX.
                 delay(160)
                 synchronized(pttLock) {
                     if (pttGeneration == generation && pttHolders.isEmpty()) {
                         client.setPushToTalk(false)
                     }
+                }
+            }
+        }
+        // If Android stops the capture thread, never leave the transmitter open.
+        scope.launch {
+            delay(1800)
+            synchronized(pttLock) {
+                if (pttGeneration == generation && pttHolders.isEmpty()) {
+                    rogerTone.cancel()
+                    client.setPushToTalk(false)
                 }
             }
         }
