@@ -1,11 +1,11 @@
 # Builds the Rust core for Android and regenerates the Kotlin bindings.
-# Usage: powershell -File tools/build-core.ps1 [-Abis arm64-v8a,armeabi-v7a]
+# Usage: powershell -File tools/build-core.ps1 [-Abis arm64-v8a,x86_64]
 param([string[]]$Abis = @("arm64-v8a", "armeabi-v7a"))
 $ErrorActionPreference = "Stop"
 $root = Split-Path $PSScriptRoot -Parent
 $ndkVersion = "29.0.14206865"
 if (-not $Abis.Count -or @($Abis | Where-Object { $_ -notin @("arm64-v8a", "armeabi-v7a", "x86", "x86_64") }).Count) {
-    throw "Specify supported Android ABIs as a PowerShell string array (default: arm64-v8a and armeabi-v7a)."
+    throw "Specify supported Android ABIs as a PowerShell string array (default: arm64-v8a)."
 }
 
 $vswhere = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
