@@ -5,6 +5,10 @@ import androidx.compose.material3.Shapes
 import androidx.compose.material3.Typography
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextStyle
@@ -12,51 +16,68 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
-/** TeamSpeak palette: near-black charcoal surfaces with the TeamSpeak blue accent. */
+/**
+ * The original TeamSpeak dimensions, screens and controls are untouched.
+ * Only palette values change when a user opts into one of the extra themes.
+ */
 object Ts {
-    val Blue = Color(0xFF1A91D0)
-    val BlueDim = Color(0xFF14709F)
-    val Bg = Color(0xFF111111)
-    val Surface = Color(0xFF181A1C)
-    val SurfaceHigh = Color(0xFF212325)
-    val SurfaceHighest = Color(0xFF2A2D30)
-    val Outline = Color(0xFF34383C)
+    var Blue by mutableStateOf(Color(0xFF1A91D0)); private set
+    var BlueDim by mutableStateOf(Color(0xFF14709F)); private set
+    var Bg by mutableStateOf(Color(0xFF111111)); private set
+    var Surface by mutableStateOf(Color(0xFF181A1C)); private set
+    var SurfaceHigh by mutableStateOf(Color(0xFF212325)); private set
+    var SurfaceHighest by mutableStateOf(Color(0xFF2A2D30)); private set
+    var Outline by mutableStateOf(Color(0xFF34383C)); private set
     val Text = Color(0xFFE6E8EA)
     val TextDim = Color(0xFF9BA1A6)
     val TextFaint = Color(0xFF6B7176)
     val Red = Color(0xFFF44336)
-    val Green = Color(0xFF4CAF50)
-    val Yellow = Color(0xFFFFC107)
-    val Orange = Color(0xFFFF9800)
-    val Purple = Color(0xFFAB47BC)
-    val Selection = Color(0x331A91D0)
-}
+    var Green by mutableStateOf(Color(0xFF4CAF50)); private set
+    var Yellow by mutableStateOf(Color(0xFFFFC107)); private set
+    var Orange by mutableStateOf(Color(0xFFFF9800)); private set
+    var Purple by mutableStateOf(Color(0xFFAB47BC)); private set
+    var Selection by mutableStateOf(Color(0x331A91D0)); private set
 
-private val scheme = darkColorScheme(
-    primary = Ts.Blue,
-    onPrimary = Color.White,
-    primaryContainer = Ts.BlueDim,
-    onPrimaryContainer = Color.White,
-    secondary = Ts.Blue,
-    onSecondary = Color.White,
-    secondaryContainer = Ts.SurfaceHighest,
-    onSecondaryContainer = Ts.Text,
-    tertiary = Ts.Green,
-    background = Ts.Bg,
-    onBackground = Ts.Text,
-    surface = Ts.Bg,
-    onSurface = Ts.Text,
-    surfaceVariant = Ts.SurfaceHigh,
-    onSurfaceVariant = Ts.TextDim,
-    surfaceContainerLowest = Ts.Bg,
-    surfaceContainerLow = Ts.Surface,
-    surfaceContainer = Ts.Surface,
-    surfaceContainerHigh = Ts.SurfaceHigh,
-    surfaceContainerHighest = Ts.SurfaceHighest,
-    outline = Ts.Outline,
-    outlineVariant = Ts.Outline,
-    error = Ts.Red,
-)
+    private var current = "standard"
+    fun useTheme(name: String) {
+        if (current == name) return
+        current = name
+        when (name) {
+            "christmas" -> {
+                Blue = Color(0xFFD83746); BlueDim = Color(0xFFAF2937)
+                Bg = Color(0xFF091B17); Surface = Color(0xFF112721)
+                SurfaceHigh = Color(0xFF19372B); SurfaceHighest = Color(0xFF264435)
+                Outline = Color(0xFF42634D); Green = Color(0xFF36BA61)
+                Yellow = Color(0xFFFFCC53); Orange = Color(0xFFDBA44C)
+                Purple = Color(0xFFD799DA); Selection = Color(0x33D83746)
+            }
+            "27mc" -> {
+                Blue = Color(0xFFFFAE39); BlueDim = Color(0xFFC67A1B)
+                Bg = Color(0xFF0F1415); Surface = Color(0xFF232522)
+                SurfaceHigh = Color(0xFF34352E); SurfaceHighest = Color(0xFF414237)
+                Outline = Color(0xFF67624C); Green = Color(0xFF95B64B)
+                Yellow = Color(0xFFFFD365); Orange = Color(0xFFFF981B)
+                Purple = Color(0xFFCDA37A); Selection = Color(0x33FFAE39)
+            }
+            "space" -> {
+                Blue = Color(0xFF36CEFA); BlueDim = Color(0xFF1585BA)
+                Bg = Color(0xFF080D25); Surface = Color(0xFF141B39)
+                SurfaceHigh = Color(0xFF202B4E); SurfaceHighest = Color(0xFF2C3761)
+                Outline = Color(0xFF45538A); Green = Color(0xFF4FDAD7)
+                Yellow = Color(0xFFFFC86B); Orange = Color(0xFFFF9870)
+                Purple = Color(0xFFC17BFA); Selection = Color(0x3336CEFA)
+            }
+            else -> {
+                Blue = Color(0xFF1A91D0); BlueDim = Color(0xFF14709F)
+                Bg = Color(0xFF111111); Surface = Color(0xFF181A1C)
+                SurfaceHigh = Color(0xFF212325); SurfaceHighest = Color(0xFF2A2D30)
+                Outline = Color(0xFF34383C); Green = Color(0xFF4CAF50)
+                Yellow = Color(0xFFFFC107); Orange = Color(0xFFFF9800)
+                Purple = Color(0xFFAB47BC); Selection = Color(0x331A91D0)
+            }
+        }
+    }
+}
 
 private val type = Typography().run {
     copy(
@@ -67,7 +88,33 @@ private val type = Typography().run {
 }
 
 @Composable
-fun TsTheme(content: @Composable () -> Unit) {
+fun TsTheme(theme: String = "standard", content: @Composable () -> Unit) {
+    LaunchedEffect(theme) { Ts.useTheme(theme) }
+    val scheme = darkColorScheme(
+        primary = Ts.Blue,
+        onPrimary = Color.White,
+        primaryContainer = Ts.BlueDim,
+        onPrimaryContainer = Color.White,
+        secondary = Ts.Blue,
+        onSecondary = Color.White,
+        secondaryContainer = Ts.SurfaceHighest,
+        onSecondaryContainer = Ts.Text,
+        tertiary = Ts.Green,
+        background = Ts.Bg,
+        onBackground = Ts.Text,
+        surface = Ts.Bg,
+        onSurface = Ts.Text,
+        surfaceVariant = Ts.SurfaceHigh,
+        onSurfaceVariant = Ts.TextDim,
+        surfaceContainerLowest = Ts.Bg,
+        surfaceContainerLow = Ts.Surface,
+        surfaceContainer = Ts.Surface,
+        surfaceContainerHigh = Ts.SurfaceHigh,
+        surfaceContainerHighest = Ts.SurfaceHighest,
+        outline = Ts.Outline,
+        outlineVariant = Ts.Outline,
+        error = Ts.Red,
+    )
     MaterialTheme(
         colorScheme = scheme,
         typography = type,
