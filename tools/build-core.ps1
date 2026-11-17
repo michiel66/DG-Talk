@@ -1,11 +1,11 @@
 # Builds the Rust core for Android and regenerates the Kotlin bindings.
-# Usage: powershell -File tools/build-core.ps1 [-Abis arm64-v8a,x86_64]
-param([string[]]$Abis = @("arm64-v8a"))
+# Usage: powershell -File tools/build-core.ps1 [-Abis arm64-v8a,armeabi-v7a]
+param([string[]]$Abis = @("arm64-v8a", "armeabi-v7a"))
 $ErrorActionPreference = "Stop"
 $root = Split-Path $PSScriptRoot -Parent
 $ndkVersion = "29.0.14206865"
 if (-not $Abis.Count -or @($Abis | Where-Object { $_ -notin @("arm64-v8a", "armeabi-v7a", "x86", "x86_64") }).Count) {
-    throw "Specify supported Android ABIs as a PowerShell string array (default: arm64-v8a)."
+    throw "Specify supported Android ABIs as a PowerShell string array (default: arm64-v8a and armeabi-v7a)."
 }
 
 $vswhere = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
@@ -41,7 +41,7 @@ $env:ANDROID_NDK_HOME = $ndk; $env:ANDROID_NDK_ROOT = $ndk; $env:ANDROID_NDK = $
 Push-Location $root
 try {
     $targets = $Abis | ForEach-Object { "-t"; $_ }
-    cargo ndk @targets -P 26 -o android/app/src/main/jniLibs build --release --locked -p tscore
+    cargo ndk @targets -P 24 -o android/app/src/main/jniLibs build --release --locked -p tscore
     if ($LASTEXITCODE -ne 0) { throw "cargo ndk failed" }
     foreach ($abi in $Abis) {
         $library = Join-Path $root "android/app/src/main/jniLibs/$abi/libtscore.so"
