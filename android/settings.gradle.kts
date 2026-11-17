@@ -12,5 +12,5 @@ dependencyResolutionManagement {
         mavenCentral()
     }
 }
-rootProject.name = "TSClient"
+rootProject.name = "DG-Talk"
 include(":app")
