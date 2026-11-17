@@ -7,7 +7,13 @@ on:
       - '.github/workflows/dg-talk-apk.yml'
       - 'android/**'
       - 'tools/dg-talk-brand.py'
+      - 'tools/build-core.ps1'
+      - 'rust-toolchain.toml'
   workflow_dispatch:
+
+concurrency:
+  group: dg-talk-universal-${{ github.ref }}
+  cancel-in-progress: true
 
 permissions:
   contents: read
@@ -29,11 +35,13 @@ jobs:
       - name: Gradle dependency cache
         uses: gradle/actions/setup-gradle@v4
 
-      - name: Install Rust 1.99 for Android arm64
+      - name: Install Rust 1.99 for Android 32-bit and 64-bit ARM
         shell: pwsh
         run: |
           rustup toolchain install 1.99.0 --profile minimal --target aarch64-linux-android
           if ($LASTEXITCODE -ne 0) { throw "Rust toolchain installation failed" }
+          rustup target add armv7-linux-androideabi --toolchain 1.99.0
+          if ($LASTEXITCODE -ne 0) { throw "Rust ARMv7 target installation failed" }
 
       - name: Rust build cache
         uses: Swatinem/rust-cache@v2
@@ -63,24 +71,43 @@ jobs:
         run: |
           & ./tools/build-core.ps1
           if ($LASTEXITCODE -ne 0) { throw "Native TeamSpeak core compilation failed" }
-          if (-not (Test-Path "android/app/src/main/jniLibs/arm64-v8a/libtscore.so")) {
-            throw "Voice engine library is missing"
+          foreach ($abi in @("arm64-v8a", "armeabi-v7a")) {
+            if (-not (Test-Path "android/app/src/main/jniLibs/$abi/libtscore.so")) {
+              throw "Voice engine library is missing for $abi"
+            }
           }
 
       - name: Build installable DG-Talk Android APK
         shell: pwsh
         working-directory: android
         run: |
-          & ./gradlew.bat --no-daemon --console=plain :app:assembleDebug "-PciVersionCode=1025" "-PciVersionName=1.0.0"
+          & ./gradlew.bat --no-daemon --console=plain :app:assembleDebug "-PciVersionCode=1026" "-PciVersionName=1.1.0"
           if ($LASTEXITCODE -ne 0) { throw "DG-Talk Android build failed" }
           $apk = "app/build/outputs/apk/debug/app-debug.apk"
           if (-not (Test-Path $apk)) { throw "APK missing after successful build" }
-          Copy-Item $apk "../DG-Talk-arm64-v8a.apk"
+          $aapt2 = Join-Path $env:ANDROID_HOME "build-tools/36.0.0/aapt2.exe"
+          $badging = & $aapt2 dump badging $apk
+          if ($LASTEXITCODE -ne 0 -or -not ($badging -match "^sdkVersion:'24'")) {
+            throw "The APK does not support Android 7.0 (minSdk 24)"
+          }
+          Add-Type -AssemblyName System.IO.Compression, System.IO.Compression.FileSystem
+          $zip = [System.IO.Compression.ZipFile]::OpenRead((Resolve-Path $apk))
+          try {
+            $entries = @($zip.Entries | ForEach-Object { $_.FullName })
+            foreach ($abi in @("arm64-v8a", "armeabi-v7a")) {
+              foreach ($lib in @("libtscore.so", "libjnidispatch.so")) {
+                if ("lib/$abi/$lib" -notin $entries) {
+                  throw "The APK is missing lib/$abi/$lib"
+                }
+              }
+            }
+          } finally { $zip.Dispose() }
+          Copy-Item $apk "../DG-Talk-Android7-32-64.apk"
 
       - name: Upload DG-Talk APK for download
         uses: actions/upload-artifact@v4
         with:
-          name: DG-Talk-Android-APK
-          path: DG-Talk-arm64-v8a.apk
+          name: DG-Talk-Android7-32-64-APK
+          path: DG-Talk-Android7-32-64.apk
           if-no-files-found: error
           retention-days: 30
