@@ -53,23 +53,38 @@ class ConnectionService : Service() {
                 getSystemService(NotificationManager::class.java).notify(1, notification())
             }
         }
-        // Headset/Bluetooth media button toggles push-to-talk when enabled.
-        if (app.store.settings.value.headsetButtonPtt || app.store.settings.value.externalPttEnabled) {
-            media = MediaSession(this, "tsclient").apply {
-                setCallback(object : MediaSession.Callback() {
-                    override fun onMediaButtonEvent(intent: Intent): Boolean {
-                        @Suppress("DEPRECATION") val ev = intent.getParcelableExtra<KeyEvent>(Intent.EXTRA_KEY_EVENT) ?: return false
-                        if (app.session.handleExternalPtt(ev)) return true
-                        if (app.store.settings.value.headsetButtonPtt &&
-                            ev.action == KeyEvent.ACTION_DOWN && ev.repeatCount == 0) {
-                            headsetTalking = !headsetTalking
-                            app.session.setPushToTalk(headsetTalking, "headset")
+        // Activate Bluetooth media buttons only while a PTT setting needs them.
+        // Live updates let users enable/disable the function without reconnecting.
+        scope.launch {
+            app.store.settings.map { it.headsetButtonPtt || it.externalPttEnabled }
+                .distinctUntilChanged().collect { enabled ->
+                    if (enabled && media == null) {
+                        media = MediaSession(this@ConnectionService, "dg-talk-ptt").apply {
+                            setCallback(object : MediaSession.Callback() {
+                                override fun onMediaButtonEvent(intent: Intent): Boolean {
+                                    @Suppress("DEPRECATION")
+                                    val ev = intent.getParcelableExtra<KeyEvent>(Intent.EXTRA_KEY_EVENT) ?: return false
+                                    if (app.session.handleExternalPtt(ev)) return true
+                                    if (!app.store.settings.value.headsetButtonPtt) return false
+                                    if (ev.action == KeyEvent.ACTION_DOWN && ev.repeatCount == 0) {
+                                        headsetTalking = !headsetTalking
+                                        app.session.setPushToTalk(headsetTalking, "headset")
+                                    }
+                                    return true
+                                }
+                            })
+                            isActive = true
                         }
-                        return true
+                    } else if (!enabled && media != null) {
+                        if (headsetTalking) {
+                            headsetTalking = false
+                            app.session.setPushToTalk(false, "headset")
+                        }
+                        media?.isActive = false
+                        media?.release()
+                        media = null
                     }
-                })
-                isActive = true
-            }
+                }
         }
         // Stopping only from here avoids stopService() racing startForeground(). It follows "a connection is
         // wanted", not the status: switching servers or reconnecting passes through "disconnected" and must
