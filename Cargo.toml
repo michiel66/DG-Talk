@@ -1,0 +1,24 @@
+[workspace]
+resolver = "2"
+members = ["core", "cli", "uniffi-bindgen"]
+exclude = ["vendor"]
+
+[workspace.dependencies]
+tsclientlib = { path = "vendor/tsclientlib/tsclientlib", default-features = false, features = ["audio"] }
+tsproto-packets = { path = "vendor/tsclientlib/utils/tsproto-packets" }
+tsproto-types = { path = "vendor/tsclientlib/utils/tsproto-types" }
+audiopus = "0.3.0-rc.0"
+tokio = { version = "1", features = ["rt", "time", "sync", "macros", "net", "fs", "io-util"] }
+futures = "0.3"
+tracing = "0.1"
+anyhow = "1"
+uniffi = "0.32"
+
+# Opus must use the release CRT even in the unstripped Windows binding-generator build.
+[profile.dev.package.audiopus_sys]
+opt-level = 1
+
+[profile.release]
+opt-level = 3
+lto = "thin"
+strip = true
