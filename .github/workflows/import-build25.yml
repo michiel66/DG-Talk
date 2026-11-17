@@ -30,7 +30,7 @@ jobs:
           test "$actual" = "dafbab92037b3ae135e494319dd4016fdcb1f2b9"
           # Preserve our own import script and build workflow. Do not import the
           # upstream's release workflow: it requires private signing credentials.
-          rsync -a --exclude='.git' --exclude='.github/workflows/release.yml' "$tmp/upstream/" ./
+          rsync -a --exclude='.git' --exclude='README.md' --exclude='.github/workflows/release.yml' "$tmp/upstream/" ./
           python3 tools/dg-talk-brand.py
 
       - name: Commit complete DG-Talk Android source to main
