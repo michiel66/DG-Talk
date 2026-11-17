@@ -33,11 +33,11 @@ android {
 
     defaultConfig {
         applicationId = "nl.dg.talk"
-        minSdk = 26
+        minSdk = 24
         targetSdk = 36
         versionCode = ciVersionCode
         versionName = ciVersionName
-        ndk { abiFilters += listOf("arm64-v8a") }
+        ndk { abiFilters += listOf("arm64-v8a", "armeabi-v7a") }
     }
 
     signingConfigs {
