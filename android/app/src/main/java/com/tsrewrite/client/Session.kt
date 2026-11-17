@@ -3,6 +3,7 @@ package com.tsrewrite.client
 import android.content.Context
 import android.content.Intent
 import android.util.Log
+import android.view.KeyEvent
 import androidx.core.content.ContextCompat
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
@@ -112,6 +113,13 @@ class Session(private val context: Context, private val store: Store) : EventLis
         private set
     private var identityId = ""
     private var audio: AudioEngine? = null
+    private val rogerTone = RogerBeep()
+    private val pttLock = Any()
+    private val pttHolders = mutableSetOf<String>()
+    private var pttGeneration = 0L
+    private val _learningExternalPtt = MutableStateFlow(false)
+    val learningExternalPtt: StateFlow<Boolean> = _learningExternalPtt
+
     @Volatile private var userDisconnect = false
     private var reconnectAttempt = 0
     private var nickTry = 0
@@ -142,6 +150,7 @@ class Session(private val context: Context, private val store: Store) : EventLis
         _unread.value = emptySet()
         _log.value = emptyList()
         _talking.value = emptyMap()
+        synchronized(pttLock) { pttGeneration++; pttHolders.clear(); rogerTone.cancel() }
         _inputMuted.value = false; _outputMuted.value = false; _away.value = false
         permCache = null
         icons.reset(b.address)
@@ -204,15 +213,105 @@ class Session(private val context: Context, private val store: Store) : EventLis
     fun startAudio() {
         audio?.stop()
         forcedOutput = null
-        audio = AudioEngine(context, store, ClientIo(client), onRoute = { _route.value = it }, forced = { forcedOutput }).also { it.start() }
+        audio = AudioEngine(context, store, ClientIo(client), onRoute = { _route.value = it },
+            forced = { forcedOutput }, toneFilter = { rogerTone.inject(it) }).also { it.start() }
     }
 
     fun stopAudio() {
+        synchronized(pttLock) {
+            pttGeneration++
+            pttHolders.clear()
+            rogerTone.cancel()
+            client.setPushToTalk(false)
+        }
         audio?.stop()
         audio = null
         _route.value = null
         forcedOutput = null
     }
+
+
+    /**
+     * Unified press/release for screen, floating dock, volume and mapped external keys.
+     * The last release keeps the TS3 transmitter open while the roger audio frames
+     * pass through the same capture thread. A new press cancels the sign-off.
+     */
+    fun setPushToTalk(pressed: Boolean, source: String = "screen") {
+        if (store.settings.value.voiceMode != uniffi.tscore.VoiceMode.PUSH_TO_TALK) return
+        synchronized(pttLock) {
+            if (pressed) {
+                if (!pttHolders.add(source)) return
+                pttGeneration++
+                rogerTone.cancel()
+                client.setPushToTalk(true)
+            } else {
+                if (!pttHolders.remove(source)) return
+                if (pttHolders.isNotEmpty()) return
+                val generation = ++pttGeneration
+                if (store.settings.value.rogerBeep && _status.value.first == Status.CONNECTED &&
+                    !_inputMuted.value && audio != null) {
+                    beginRogerSignoff(generation)
+                } else {
+                    rogerTone.cancel()
+                    client.setPushToTalk(false)
+                }
+            }
+        }
+    }
+
+    private fun beginRogerSignoff(generation: Long) {
+        // Caller holds pttLock. Callback runs on the dedicated audio thread.
+        rogerTone.start {
+            scope.launch {
+                delay(160)
+                synchronized(pttLock) {
+                    if (pttGeneration == generation && pttHolders.isEmpty()) {
+                        client.setPushToTalk(false)
+                    }
+                }
+            }
+        }
+    }
+
+    /** Test sends exactly the same three tones to the current TeamSpeak channel. */
+    fun testRogerBeep(): Boolean {
+        if (_status.value.first != Status.CONNECTED || _inputMuted.value ||
+            store.settings.value.voiceMode != uniffi.tscore.VoiceMode.PUSH_TO_TALK || audio == null) return false
+        synchronized(pttLock) {
+            if (pttHolders.isNotEmpty()) return false
+            val generation = ++pttGeneration
+            rogerTone.cancel()
+            client.setPushToTalk(true)
+            beginRogerSignoff(generation)
+        }
+        return true
+    }
+
+    fun learnExternalPtt() { _learningExternalPtt.value = true }
+    fun cancelLearnExternalPtt() { _learningExternalPtt.value = false }
+
+    /** Android physical button events and standard Bluetooth media/keyboard events. */
+    fun handleExternalPtt(event: KeyEvent): Boolean {
+        val code = event.keyCode
+        if (_learningExternalPtt.value && event.action == KeyEvent.ACTION_DOWN && event.repeatCount == 0) {
+            if (code == KeyEvent.KEYCODE_BACK || code == KeyEvent.KEYCODE_HOME ||
+                code == KeyEvent.KEYCODE_POWER || code == KeyEvent.KEYCODE_UNKNOWN) return false
+            store.updateSettings(store.settings.value.copy(externalPttEnabled = true, externalPttKeyCode = code))
+            _learningExternalPtt.value = false
+            return true
+        }
+        val s = store.settings.value
+        if (!s.externalPttEnabled || s.externalPttKeyCode == 0 || code != s.externalPttKeyCode) return false
+        if (_status.value.first == Status.CONNECTED && s.voiceMode == uniffi.tscore.VoiceMode.PUSH_TO_TALK) {
+            when (event.action) {
+                KeyEvent.ACTION_DOWN -> if (event.repeatCount == 0) setPushToTalk(true, "external")
+                KeyEvent.ACTION_UP -> setPushToTalk(false, "external")
+            }
+        }
+        return true
+    }
+
+    fun releaseExternalPtt() = setPushToTalk(false, "external")
 
     /** Loudspeaker/earpiece (or loudspeaker/headset) chosen in the voice screen; lasts for this connection only. */
     @Volatile private var forcedOutput: AudioRoute.Output? = null
@@ -232,7 +331,16 @@ class Session(private val context: Context, private val store: Store) : EventLis
         audio?.refresh()
     }
 
-    fun setInputMuted(m: Boolean) { _inputMuted.value = m; fire(client.setInputMuted(m)) }
+    fun setInputMuted(m: Boolean) {
+        if (m) synchronized(pttLock) {
+            pttGeneration++
+            pttHolders.clear()
+            rogerTone.cancel()
+            client.setPushToTalk(false)
+        }
+        _inputMuted.value = m
+        fire(client.setInputMuted(m))
+    }
     fun setOutputMuted(m: Boolean) { _outputMuted.value = m; fire(client.setOutputMuted(m)) }
 
     /** The mute buttons (voice dock and notification): toggle and play the matching cue. */
