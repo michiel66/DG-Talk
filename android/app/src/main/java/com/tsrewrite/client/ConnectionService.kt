@@ -54,14 +54,16 @@ class ConnectionService : Service() {
             }
         }
         // Headset/Bluetooth media button toggles push-to-talk when enabled.
-        if (app.store.settings.value.headsetButtonPtt) {
+        if (app.store.settings.value.headsetButtonPtt || app.store.settings.value.externalPttEnabled) {
             media = MediaSession(this, "tsclient").apply {
                 setCallback(object : MediaSession.Callback() {
                     override fun onMediaButtonEvent(intent: Intent): Boolean {
                         @Suppress("DEPRECATION") val ev = intent.getParcelableExtra<KeyEvent>(Intent.EXTRA_KEY_EVENT) ?: return false
-                        if (ev.action == KeyEvent.ACTION_DOWN && ev.repeatCount == 0) {
+                        if (app.session.handleExternalPtt(ev)) return true
+                        if (app.store.settings.value.headsetButtonPtt &&
+                            ev.action == KeyEvent.ACTION_DOWN && ev.repeatCount == 0) {
                             headsetTalking = !headsetTalking
-                            app.session.client.setPushToTalk(headsetTalking)
+                            app.session.setPushToTalk(headsetTalking, "headset")
                         }
                         return true
                     }
@@ -160,6 +162,8 @@ class ConnectionService : Service() {
     override fun onDestroy() {
         scope.cancel()
         floating?.stop()
+        if (headsetTalking) app.session.setPushToTalk(false, "headset")
+        app.session.releaseExternalPtt()
         media?.release()
         val app = application as App
         app.session.stopAudio()
