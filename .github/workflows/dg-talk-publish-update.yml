@@ -86,9 +86,10 @@ jobs:
             abis = @("arm64-v8a", "armeabi-v7a")
             sha256 = $hash
             certificateSha256 = $actualSha
-            downloadUrl = "https://github.com/$env:GITHUB_REPOSITORY/releases/download/v1.2.1/DG-Talk-1.2.1-Vaste-Sleutel-Test.apk"
+            downloadUrl = "https://github.com/$env:GITHUB_REPOSITORY/releases/download/v1.2.1/DG-Talk-1.2.1.apk"
           }
           $metadata | ConvertTo-Json -Depth 5 | Set-Content -Path "dist/update.json" -Encoding utf8
+          Copy-Item -LiteralPath $apk -Destination "dist/DG-Talk-1.2.1.apk" -Force
           Write-Output "Verified signed DG-Talk 1.2.1 and prepared update metadata"
 
       - name: Publish release only after manual approval
@@ -96,5 +97,5 @@ jobs:
         run: |
           & gh release view "v1.2.1" --repo $env:GITHUB_REPOSITORY *> $null
           if ($LASTEXITCODE -eq 0) { throw "v1.2.1 already published; refusing to replace it" }
-          & gh release create "v1.2.1" "dist/DG-Talk-1.2.1-Vaste-Sleutel-Test.apk" "dist/update.json" --repo $env:GITHUB_REPOSITORY --target $env:RELEASE_COMMIT --title "DG-Talk 1.2.1" --notes "Eerste officiele ondertekende DG-Talk-versie. Voor gebruikers van debug-APK #32 is een eenmalige herinstallatie met vooraf gemaakte back-up nodig. Daarna ondersteunt DG-Talk updates via de app." --latest
+          & gh release create "v1.2.1" "dist/DG-Talk-1.2.1.apk" "dist/update.json" --repo $env:GITHUB_REPOSITORY --target $env:RELEASE_COMMIT --title "DG-Talk 1.2.1" --notes "Eerste officiele ondertekende DG-Talk-versie. Voor gebruikers van debug-APK #32 is een eenmalige herinstallatie met vooraf gemaakte back-up nodig. Daarna ondersteunt DG-Talk updates via de app." --latest
           if ($LASTEXITCODE -ne 0) { throw "Could not publish verified DG-Talk update" }
