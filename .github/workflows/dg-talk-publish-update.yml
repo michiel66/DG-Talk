@@ -1,0 +1,100 @@
+name: DG-Talk Goedgekeurde Update Publiceren
+
+on:
+  workflow_dispatch:
+    inputs:
+      tested_run_id:
+        description: "GitHub Actions run-ID van de getest en goedgekeurde DG-Talk 1.2.1 testbuild"
+        required: true
+        type: string
+
+permissions:
+  contents: write
+  actions: read
+
+jobs:
+  publish:
+    runs-on: windows-2022
+    timeout-minutes: 25
+    env:
+      GH_TOKEN: ${{ github.token }}
+      ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+      ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+      ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download the exact previously tested APK
+        shell: pwsh
+        run: |
+          $runId = [long]"${{ inputs.tested_run_id }}"
+          if ($runId -le 0) { throw "Missing valid test run ID" }
+          New-Item -ItemType Directory -Path "dist" -Force | Out-Null
+          & gh run download $runId --repo $env:GITHUB_REPOSITORY --name "DG-Talk-1.2.1-Vaste-Sleutel-Test" --dir "dist"
+          if ($LASTEXITCODE -ne 0) { throw "Could not retrieve tested APK artifact" }
+          $apk = "dist/DG-Talk-1.2.1-Vaste-Sleutel-Test.apk"
+          if (-not (Test-Path $apk)) { throw "Tested APK was not found" }
+          $originSha = (& gh api "repos/$env:GITHUB_REPOSITORY/actions/runs/$runId" --jq ".head_sha").Trim()
+          if ($LASTEXITCODE -ne 0 -or $originSha -notmatch '^[0-9a-f]{40}$') { throw "Test run SHA unavailable" }
+          "RELEASE_COMMIT=$originSha" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+
+      - name: Install APK verification tools
+        shell: pwsh
+        run: |
+          $sdkmanager = Join-Path $env:ANDROID_HOME "cmdline-tools/latest/bin/sdkmanager.bat"
+          & $sdkmanager "build-tools;36.0.0"
+          if ($LASTEXITCODE -ne 0) { throw "Could not install Android build tools" }
+
+      - name: Verify package and original permanent certificate
+        shell: pwsh
+        run: |
+          foreach ($name in @("ANDROID_KEYSTORE_BASE64", "ANDROID_KEYSTORE_PASSWORD", "ANDROID_KEY_ALIAS")) {
+            if ([string]::IsNullOrWhiteSpace([Environment]::GetEnvironmentVariable($name))) { throw "Missing GitHub secret $name" }
+          }
+          $keyPath = Join-Path $env:RUNNER_TEMP "DG-Talk-release.jks"
+          [IO.File]::WriteAllBytes($keyPath, [Convert]::FromBase64String($env:ANDROID_KEYSTORE_BASE64))
+          $expectedLines = & keytool -list -v -keystore $keyPath -storepass:env ANDROID_KEYSTORE_PASSWORD -alias $env:ANDROID_KEY_ALIAS
+          if ($LASTEXITCODE -ne 0) { throw "Could not read release certificate" }
+          $expectedSha = ""
+          foreach ($l in $expectedLines) {
+            if ($l -match '^\s*SHA256:\s*([0-9a-fA-F:]+)\s*$') { $expectedSha = $Matches[1].Replace(":", "").ToLowerInvariant() }
+          }
+          if ($expectedSha -notmatch '^[0-9a-f]{64}$') { throw "Invalid release certificate SHA256" }
+          $apk = "dist/DG-Talk-1.2.1-Vaste-Sleutel-Test.apk"
+          $aapt2 = Join-Path $env:ANDROID_HOME "build-tools/36.0.0/aapt2.exe"
+          $badging = (& $aapt2 dump badging $apk) -join "`n"
+          if ($LASTEXITCODE -ne 0 -or $badging -notmatch "package: name='nl.dg.talk' versionCode='1031' versionName='1.2.1'" -or $badging -notmatch "sdkVersion:'24'") {
+            throw "Wrong APK package/version/Android minSDK"
+          }
+          $apksigner = Join-Path $env:ANDROID_HOME "build-tools/36.0.0/apksigner.bat"
+          $output = & $apksigner verify --verbose --print-certs $apk
+          if ($LASTEXITCODE -ne 0) { throw "APK signature is invalid" }
+          $actualSha = ""
+          foreach ($l in $output) {
+            if ($l -match '^Signer #\d+ certificate SHA-256 digest:\s*([0-9a-fA-F]{64})\s*$') { $actualSha = $Matches[1].ToLowerInvariant() }
+          }
+          if ($actualSha -ne $expectedSha) { throw "APK NOT signed with the permanent DG-Talk release key" }
+          $hash = (Get-FileHash $apk -Algorithm SHA256).Hash.ToLowerInvariant()
+          $metadata = [ordered]@{
+            schemaVersion = 1
+            versionCode = 1031
+            versionName = "1.2.1"
+            applicationId = "nl.dg.talk"
+            minSdk = 24
+            abi = "arm64-v8a"
+            abis = @("arm64-v8a", "armeabi-v7a")
+            sha256 = $hash
+            certificateSha256 = $actualSha
+            downloadUrl = "https://github.com/$env:GITHUB_REPOSITORY/releases/download/v1.2.1/DG-Talk-1.2.1-Vaste-Sleutel-Test.apk"
+          }
+          $metadata | ConvertTo-Json -Depth 5 | Set-Content -Path "dist/update.json" -Encoding utf8
+          Write-Output "Verified signed DG-Talk 1.2.1 and prepared update metadata"
+
+      - name: Publish release only after manual approval
+        shell: pwsh
+        run: |
+          & gh release view "v1.2.1" --repo $env:GITHUB_REPOSITORY *> $null
+          if ($LASTEXITCODE -eq 0) { throw "v1.2.1 already published; refusing to replace it" }
+          & gh release create "v1.2.1" "dist/DG-Talk-1.2.1-Vaste-Sleutel-Test.apk" "dist/update.json" --repo $env:GITHUB_REPOSITORY --target $env:RELEASE_COMMIT --title "DG-Talk 1.2.1" --notes "Eerste officiele ondertekende DG-Talk-versie. Voor gebruikers van debug-APK #32 is een eenmalige herinstallatie met vooraf gemaakte back-up nodig. Daarna ondersteunt DG-Talk updates via de app." --latest
+          if ($LASTEXITCODE -ne 0) { throw "Could not publish verified DG-Talk update" }
