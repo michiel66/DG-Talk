@@ -125,7 +125,8 @@ fun UpdateCard(updater: Updater, modifier: Modifier = Modifier) {
                             contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 8.dp)) {
                             Text("Save to Downloads", maxLines = 1, softWrap = false)
                         }
-                        Button(onClick = ::install, button.weight(1f), colors = ButtonDefaults.buttonColors(containerColor = Ts.Blue, contentColor = Color.White)) {
+                        Button(onClick = ::install, enabled = s !is UpdateState.Available || s.sameKey,
+                            modifier = button.weight(1f), colors = ButtonDefaults.buttonColors(containerColor = Ts.Blue, contentColor = Color.White)) {
                             Text(if (s is UpdateState.Failed) "Retry" else "Update", fontWeight = FontWeight.SemiBold, maxLines = 1)
                         }
                     }
