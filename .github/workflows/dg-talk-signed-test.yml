@@ -1,0 +1,126 @@
+name: DG-Talk Vaste Sleutel Test APK
+
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: dg-talk-signed-test-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  build-android:
+    runs-on: windows-2022
+    timeout-minutes: 90
+    env:
+      ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+      ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+      ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+      ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+    steps:
+      - name: Check out DG-Talk
+        uses: actions/checkout@v4
+
+      - name: Java 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Gradle dependency cache
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Install Rust 1.99 for Android 32-bit and 64-bit ARM
+        shell: pwsh
+        run: |
+          rustup toolchain install 1.99.0 --profile minimal --target aarch64-linux-android
+          if ($LASTEXITCODE -ne 0) { throw "Rust toolchain installation failed" }
+          rustup target add armv7-linux-androideabi --toolchain 1.99.0
+          if ($LASTEXITCODE -ne 0) { throw "Rust ARMv7 target installation failed" }
+
+      - name: Rust build cache
+        uses: Swatinem/rust-cache@v2
+
+      - name: Install cargo-ndk 4.1.2
+        shell: pwsh
+        run: |
+          $installed = if (Get-Command cargo-ndk -ErrorAction SilentlyContinue) { cargo ndk --version } else { "" }
+          if ("$installed" -notmatch '4\.1\.2') {
+            cargo install cargo-ndk --version 4.1.2 --locked --force
+            if ($LASTEXITCODE -ne 0) { throw "cargo-ndk installation failed" }
+          }
+
+      - name: Install Android SDK 37 and NDK 29
+        shell: pwsh
+        run: |
+          if (-not $env:ANDROID_HOME) { throw "ANDROID_HOME is not set" }
+          $sdkmanager = Join-Path $env:ANDROID_HOME "cmdline-tools/latest/bin/sdkmanager.bat"
+          if (-not (Test-Path $sdkmanager)) { throw "Android sdkmanager was not found" }
+          1..100 | ForEach-Object { "y" } | & $sdkmanager --licenses
+          if ($LASTEXITCODE -ne 0) { throw "Could not accept Android licenses" }
+          & $sdkmanager "platform-tools" "platforms;android-37.0" "build-tools;36.0.0" "ndk;29.0.14206865"
+          if ($LASTEXITCODE -ne 0) { throw "Required Android SDK components were not installed" }
+
+      - name: Compile original TeamSpeak Rust voice engine and Kotlin bindings
+        shell: pwsh
+        run: |
+          & ./tools/build-core.ps1
+          if ($LASTEXITCODE -ne 0) { throw "Native TeamSpeak core compilation failed" }
+          foreach ($abi in @("arm64-v8a", "armeabi-v7a")) {
+            if (-not (Test-Path "android/app/src/main/jniLibs/$abi/libtscore.so")) {
+              throw "Voice engine library is missing for $abi"
+            }
+          }
+
+      - name: Load permanent DG-Talk signing key from GitHub Secrets
+        shell: pwsh
+        run: |
+          foreach ($name in @("ANDROID_KEYSTORE_BASE64", "ANDROID_KEYSTORE_PASSWORD", "ANDROID_KEY_ALIAS", "ANDROID_KEY_PASSWORD")) {
+            if ([string]::IsNullOrWhiteSpace([Environment]::GetEnvironmentVariable($name))) {
+              throw "GitHub Actions secret $name is missing. Set it in Settings > Secrets and variables > Actions."
+            }
+          }
+          $keyPath = Join-Path $env:RUNNER_TEMP "DG-Talk-release.jks"
+          [IO.File]::WriteAllBytes($keyPath, [Convert]::FromBase64String($env:ANDROID_KEYSTORE_BASE64))
+          "ANDROID_KEYSTORE_PATH=$keyPath" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          & keytool -list -keystore $keyPath -storepass:env ANDROID_KEYSTORE_PASSWORD -alias $env:ANDROID_KEY_ALIAS
+          if ($LASTEXITCODE -ne 0) { throw "The DG-Talk release key is invalid" }
+
+      - name: Build DG-Talk 1.2.1 signed test APK
+        shell: pwsh
+        working-directory: android
+        run: |
+          & ./gradlew.bat --no-daemon --console=plain :app:testDebugUnitTest :app:assembleRelease "-PciVersionCode=1031" "-PciVersionName=1.2.1"
+          if ($LASTEXITCODE -ne 0) { throw "Signed DG-Talk 1.2.1 build failed" }
+          $apk = "app/build/outputs/apk/release/app-release.apk"
+          if (-not (Test-Path $apk)) { throw "Signed APK missing" }
+          $aapt2 = Join-Path $env:ANDROID_HOME "build-tools/36.0.0/aapt2.exe"
+          $meta = (& $aapt2 dump badging $apk) -join "`n"
+          if ($LASTEXITCODE -ne 0 -or $meta -notmatch "package: name='nl.dg.talk' versionCode='1031' versionName='1.2.1'" -or $meta -notmatch "sdkVersion:'24'") {
+            throw "Unexpected package name, version, or Android 7 minimum version"
+          }
+          $apksigner = Join-Path $env:ANDROID_HOME "build-tools/36.0.0/apksigner.bat"
+          & $apksigner verify --verbose --print-certs $apk
+          if ($LASTEXITCODE -ne 0) { throw "APK signature verification failed" }
+          Add-Type -AssemblyName System.IO.Compression, System.IO.Compression.FileSystem
+          $zip = [IO.Compression.ZipFile]::OpenRead((Resolve-Path $apk))
+          try {
+            $entries = @($zip.Entries | ForEach-Object { $_.FullName })
+            foreach ($abi in @("arm64-v8a", "armeabi-v7a")) {
+              foreach ($lib in @("libtscore.so", "libjnidispatch.so")) {
+                if ("lib/$abi/$lib" -notin $entries) { throw "Missing lib/$abi/$lib in test release" }
+              }
+            }
+          } finally { $zip.Dispose() }
+          Copy-Item $apk "../DG-Talk-1.2.1-Vaste-Sleutel-Test.apk"
+          Get-FileHash "../DG-Talk-1.2.1-Vaste-Sleutel-Test.apk" -Algorithm SHA256
+
+      - name: Upload signed APK for private phone test
+        uses: actions/upload-artifact@v4
+        with:
+          name: DG-Talk-1.2.1-Vaste-Sleutel-Test
+          path: DG-Talk-1.2.1-Vaste-Sleutel-Test.apk
+          if-no-files-found: error
+          retention-days: 30
