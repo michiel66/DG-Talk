@@ -186,7 +186,13 @@ class Updater(private val context: Context) {
         check(json.getInt("schemaVersion") == 1) { "unknown update format" }
         check(json.getString("applicationId") == context.packageName) { "update is for another app" }
         check(json.getInt("minSdk") <= Build.VERSION.SDK_INT) { "update needs a newer Android version" }
-        check(json.getString("abi") in Build.SUPPORTED_ABIS) { "update is for another processor type" }
+        val releasedAbis = json.optJSONArray("abis")
+        val abiMatches = if (releasedAbis != null) {
+            (0 until releasedAbis.length()).any { releasedAbis.optString(it) in Build.SUPPORTED_ABIS }
+        } else {
+            json.getString("abi") in Build.SUPPORTED_ABIS // compatibility with earlier update metadata
+        }
+        check(abiMatches) { "update is for another processor type" }
         check(info.downloadUrl.startsWith(DOWNLOAD_PREFIX, ignoreCase = true)) // GitHub paths ignore case { "unexpected download location" }
         check(info.sha256.matches(Regex("[0-9a-f]{64}"))) { "invalid checksum" }
         return info
