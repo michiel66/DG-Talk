@@ -110,8 +110,8 @@ fun SettingsPage(store: Store, session: Session, onBack: () -> Unit) {
 
             Card("1. Thema kiezen") {
                 Hint("Schuif door de voorbeeldafbeeldingen. De app begint met het standaardthema.")
-                val ids = listOf("standard", "christmas", "27mc", "space")
-                val names = listOf("Standaard", "Kerst", "27MC", "Space")
+                val ids = listOf("standard", "christmas", "27mc", "space", "press2talk")
+                val names = listOf("Standaard", "Kerst", "27MC", "Space", "Press2Talk Pro")
                 val previews = listOf(
                     com.tsrewrite.client.R.drawable.dg_theme_standard_preview,
                     com.tsrewrite.client.R.drawable.dg_theme_christmas_preview,
@@ -134,12 +134,16 @@ fun SettingsPage(store: Store, session: Session, onBack: () -> Unit) {
                             .border(2.dp, if (pager.currentPage == ix) Ts.Blue else Ts.Outline, RoundedCornerShape(18.dp)),
                         contentAlignment = Alignment.Center
                     ) {
+                        if (ids[ix] == "press2talk") {
+                            Box(Modifier.height(246.dp).padding(4.dp)) { Press2TalkThemePreview() }
+                        } else {
                         Image(
                             painter = androidx.compose.ui.res.painterResource(previews[ix]),
                             contentDescription = "Voorbeeld " + names[ix],
                             modifier = Modifier.height(246.dp).padding(4.dp),
                             contentScale = ContentScale.Fit
                         )
+                        }
                         Box(
                             Modifier.align(Alignment.BottomCenter).fillMaxWidth()
                                 .background(Color(0xE0000000)).padding(6.dp),
@@ -155,7 +159,7 @@ fun SettingsPage(store: Store, session: Session, onBack: () -> Unit) {
                     enabled = s.dgTheme != ids[pager.currentPage],
                     modifier = Modifier.fillMaxWidth()
                 ) { Text(if (s.dgTheme == ids[pager.currentPage]) "Geselecteerd" else "Thema toepassen") }
-                Hint("Alleen kleuren en versiering veranderen. De bestaande bediening blijft hetzelfde.")
+                Hint("Press2Talk Pro heeft een eigen radiodashboard. De andere thema’s behouden hun bestaande bediening; TeamSpeak en instellingen blijven ongewijzigd.")
             }
 
             Card("2. Externe PTT-knop") {
