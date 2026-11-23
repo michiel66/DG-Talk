@@ -61,6 +61,14 @@ object Ts {
                 Yellow = Color(0xFFFFD365); Orange = Color(0xFFFF981B)
                 Purple = Color(0xFFCDA37A); Selection = Color(0x33FFAE39)
             }
+            "press2talk" -> {
+                Blue = Color(0xFF39B7FF); BlueDim = Color(0xFF1765A9)
+                Bg = Color(0xFF071529); Surface = Color(0xFF13243C)
+                SurfaceHigh = Color(0xFF1B2D47); SurfaceHighest = Color(0xFF254467)
+                Outline = Color(0xFF3E688F); Green = Color(0xFF00E8A5)
+                Yellow = Color(0xFFFFCF66); Orange = Color(0xFFF8A55D)
+                Purple = Color(0xFFAB87FB); Selection = Color(0x3339B7FF)
+            }
             "space" -> {
                 Blue = Color(0xFF36CEFA); BlueDim = Color(0xFF1585BA)
                 Bg = Color(0xFF080D25); Surface = Color(0xFF141B39)
