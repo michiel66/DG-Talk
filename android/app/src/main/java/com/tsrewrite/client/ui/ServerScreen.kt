@@ -170,6 +170,20 @@ private fun TreePage(session: Session, store: Store, badgeStore: com.tsrewrite.c
     var selection by remember { mutableStateOf<TreeSel?>(null) }
     var sheet by remember { mutableStateOf<TreeSel?>(null) }
     var awayPrompt by remember { mutableStateOf(false) }
+    var showClassicTree by remember(settings.dgTheme) { mutableStateOf(false) }
+
+    if (settings.dgTheme == "press2talk" && !showClassicTree) {
+        Press2TalkRadioPage(
+            session = session,
+            store = store,
+            onRecents = { go(SPage.Log) },
+            onChannels = { showClassicTree = true },
+            onChat = { go(SPage.Chat(session.unread.value.firstOrNull() ?: ChatKey.Channel)) },
+            onSettings = { go(SPage.Settings) },
+            onClient = { id, name -> go(SPage.Chat(session.openPrivate(id, name))) },
+        )
+        return
+    }
 
     Scaffold(
         containerColor = Ts.Bg,
@@ -177,6 +191,15 @@ private fun TreePage(session: Session, store: Store, badgeStore: com.tsrewrite.c
         bottomBar = { VoiceDock(session, store) },
     ) { pad ->
         Column(Modifier.padding(pad).fillMaxSize()) {
+            if (settings.dgTheme == "press2talk") {
+                Row(Modifier.fillMaxWidth().background(Ts.SurfaceHigh)
+                    .clickable { showClassicTree = false }.padding(horizontal = 16.dp, vertical = 10.dp),
+                    verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Rounded.GraphicEq, null, tint = Ts.Blue, modifier = Modifier.size(20.dp))
+                    Spacer(Modifier.width(10.dp))
+                    Text("Terug naar radio", color = Ts.Blue, fontWeight = FontWeight.SemiBold)
+                }
+            }
             val v = server
             LaunchedEffect(v) { v?.clients?.forEach { c -> badgeStore.parse(c.badges).forEach(badgeStore::load) } }
             if (v == null) Connecting(session) else ChannelTree(
