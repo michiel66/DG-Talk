@@ -96,6 +96,7 @@ fun Press2TalkRadioPage(
     val whisper by session.whisper.collectAsState()
     val avatars by session.icons.avatars.collectAsState()
     val route by session.route.collectAsState()
+    val skin = radioSkin(settings.dgTheme)
     var showUsers by remember { mutableStateOf(false) }
     var confirmLeave by remember { mutableStateOf(false) }
     var pressed by remember { mutableStateOf(false) }
@@ -127,7 +128,7 @@ fun Press2TalkRadioPage(
     val ptt = settings.voiceMode == VoiceMode.PUSH_TO_TALK || whisper != null
     val tx = pressed || toggled || (server?.ownClientId?.let { talking.containsKey(it) } == true)
     val txAllowed = connected && ptt && !inputMuted
-    val background = Brush.verticalGradient(listOf(Color(0xFF0D2545), RadioBackground, Color(0xFF081B33)))
+    val background = Brush.verticalGradient(listOf(skin.bgTop, skin.bgMiddle, skin.bgBottom))
 
     BoxWithConstraints(Modifier.fillMaxSize().background(background).statusBarsPadding().navigationBarsPadding()) {
         val compact = maxHeight < 685.dp
@@ -139,77 +140,81 @@ fun Press2TalkRadioPage(
             Row(Modifier.fillMaxWidth().height(if (compact) 44.dp else 54.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween) {
-                Icon(Icons.Rounded.AccountCircle, "Gebruikers", tint = RadioText,
+                Icon(Icons.Rounded.AccountCircle, "Gebruikers", tint = skin.text,
                     modifier = Modifier.size(34.dp).clickable { showUsers = true })
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Icon(Icons.Rounded.GraphicEq, null, tint = RadioBlue, modifier = Modifier.size(30.dp))
-                    Text("DG-Talk", color = RadioText, fontSize = if (compact) 24.sp else 28.sp, fontWeight = FontWeight.Bold)
+                    Icon(Icons.Rounded.GraphicEq, null, tint = skin.accent, modifier = Modifier.size(30.dp))
+                    if (skin.christmas) Text("🎅", fontSize = 20.sp)
+                    Text("DG-Talk", color = skin.text, fontSize = if (compact) 24.sp else 28.sp, fontWeight = FontWeight.Bold)
                 }
-                Box(Modifier.size(14.dp).background(if (connected) RadioGreen else Ts.Red, CircleShape))
+                if (skin.christmas) Text("❄️", fontSize = 18.sp)
+                else Box(Modifier.size(14.dp).background(if (connected) skin.connected else Ts.Red, CircleShape))
             }
 
             Row(Modifier.fillMaxWidth().height(if (compact) 65.dp else 77.dp)
-                .clip(RoundedCornerShape(18.dp)).background(RadioSurface.copy(alpha = 0.90f))
-                .border(1.dp, Color(0xFF3F5F83), RoundedCornerShape(18.dp))
+                .clip(RoundedCornerShape(18.dp)).background(skin.surface.copy(alpha = 0.90f))
+                .border(1.dp, skin.outline, RoundedCornerShape(18.dp))
                 .clickable { onChannels() }.padding(horizontal = 14.dp),
                 verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Rounded.Headset, null, tint = RadioBlue, modifier = Modifier.size(32.dp))
+                Icon(Icons.Rounded.Headset, null, tint = skin.accent, modifier = Modifier.size(32.dp))
                 Column(Modifier.weight(1f).padding(start = 12.dp)) {
                     Text(TsText.of(server?.name ?: "TS-HEERLEN"),
-                        color = RadioText, fontWeight = FontWeight.Bold, maxLines = 1,
+                        color = skin.text, fontWeight = FontWeight.Bold, maxLines = 1,
                         overflow = TextOverflow.Ellipsis, fontSize = if (compact) 17.sp else 20.sp)
                     Text((if (connected) "● Verbonden" else "● Verbinden...") +
                         "  |  Gebruikers: " + (server?.clients?.size ?: 0).toString() +
                         "  |  " + ping.toInt().toString() + " ms",
-                        color = if (connected) RadioGreen else RadioDim, fontSize = if (narrow) 10.sp else 11.sp, maxLines = 1)
+                        color = if (connected) skin.connected else skin.mutedText, fontSize = if (narrow) 10.sp else 11.sp, maxLines = 1)
                 }
-                Icon(Icons.Rounded.People, "Gebruikers tonen", tint = RadioText,
+                Icon(Icons.Rounded.People, "Gebruikers tonen", tint = skin.text,
                     modifier = Modifier.size(28.dp).clickable { showUsers = true })
             }
 
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.Top) {
-                RadioShortcut(Icons.Rounded.History, "Recents", roundButton, onRecents)
-                RadioShortcut(Icons.Rounded.List, "Kanalen", roundButton, onChannels)
-                RadioShortcut(Icons.Rounded.People, "Gebruikers", roundButton, { showUsers = true }, unread.isNotEmpty())
-                RadioShortcut(Icons.Rounded.Bluetooth, "Audio", roundButton, { session.toggleOutput() })
-                RadioShortcut(Icons.AutoMirrored.Rounded.Chat, "Chat", roundButton, onChat, unread.isNotEmpty())
-                RadioShortcut(Icons.Rounded.Settings, "Instellingen", roundButton, onSettings)
+                RadioShortcut(Icons.Rounded.History, "Recents", roundButton, onRecents, skin = skin)
+                RadioShortcut(Icons.Rounded.List, "Kanalen", roundButton, onChannels, skin = skin)
+                RadioShortcut(Icons.Rounded.People, "Gebruikers", roundButton, { showUsers = true }, unread.isNotEmpty(), skin)
+                RadioShortcut(Icons.Rounded.Bluetooth, "Audio", roundButton, { session.toggleOutput() }, skin = skin)
+                RadioShortcut(Icons.AutoMirrored.Rounded.Chat, "Chat", roundButton, onChat, unread.isNotEmpty(), skin)
+                RadioShortcut(Icons.Rounded.Settings, "Instellingen", roundButton, onSettings, skin = skin)
             }
 
             // Live speaker card. Actual TeamSpeak speaker and avatar, never a hard-coded demonstration name.
             Column(Modifier.fillMaxWidth().weight(1f)
                 .clip(RoundedCornerShape(24.dp))
-                .background(Brush.verticalGradient(listOf(Color(0xFF17365C), Color(0xFF122743), Color(0xFF192E50))))
-                .border(1.dp, Color(0xFF4679AC), RoundedCornerShape(24.dp))
+                .background(Brush.verticalGradient(listOf(skin.cardTop, skin.cardMiddle, skin.cardBottom)))
+                .border(1.dp, skin.cardOutline, RoundedCornerShape(24.dp))
                 .padding(if (compact) 10.dp else 18.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.SpaceEvenly) {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(9.dp)) {
-                    Icon(Icons.Rounded.Headset, null, tint = RadioDim, modifier = Modifier.size(25.dp))
-                    Text("Wie praat er?", color = RadioText,
+                    if (skin.christmas) Text("🎄", fontSize = 22.sp)
+                    else Icon(Icons.Rounded.Headset, null, tint = skin.mutedText, modifier = Modifier.size(25.dp))
+                    Text("Wie praat er?", color = skin.text,
                         fontWeight = FontWeight.Bold, fontSize = if (compact) 20.sp else 23.sp)
                 }
                 Row(verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.Center, modifier = Modifier.fillMaxWidth()) {
-                    AudioBars(speaking, 58.dp)
+                    AudioBars(speaking, 58.dp, skin)
                     Box(Modifier.size(if (compact) 84.dp else 110.dp)
-                        .border(3.dp, if (speaking) RadioBlue else Color(0xFF54779B), CircleShape)
-                        .background(Color(0xFF13243D), CircleShape), contentAlignment = Alignment.Center) {
+                        .border(3.dp, if (speaking) skin.accent else skin.idleRing, CircleShape)
+                        .background(skin.avatarBackground, CircleShape), contentAlignment = Alignment.Center) {
                         val av = activeClient?.let { avatars[it.avatarHash] }
                         if (av != null) Image(av, "Avatar van " + name,
                             Modifier.fillMaxSize().padding(4.dp).clip(CircleShape))
-                        else Icon(Icons.Rounded.AccountCircle, null, tint = RadioDim,
+                        else Icon(Icons.Rounded.AccountCircle, null, tint = skin.mutedText,
                             modifier = Modifier.size(if (compact) 69.dp else 90.dp))
                     }
-                    AudioBars(speaking, 58.dp)
+                    AudioBars(speaking, 58.dp, skin)
                 }
-                Text(name, color = RadioText, fontSize = if (compact) 19.sp else 23.sp,
+                if (skin.christmas) Text("❄️  🎅  ❄️", color = skin.accent, fontSize = 16.sp)
+                Text(name, color = skin.text, fontSize = if (compact) 19.sp else 23.sp,
                     fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                Text(channelName, color = RadioDim, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                Text(if (speaking) "● Spreekt nu..." else "● Luisteren", color = if (speaking) RadioGreen else RadioBlue,
+                Text(channelName, color = skin.mutedText, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(if (speaking) "● Spreekt nu..." else "● Luisteren", color = if (speaking) skin.connected else skin.accent,
                     fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
-                Text("Aangemeld als " + myName, color = RadioDim, fontSize = 10.sp,
+                Text("Aangemeld als " + myName, color = skin.mutedText, fontSize = 10.sp,
                     maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
 
@@ -218,8 +223,8 @@ fun Press2TalkRadioPage(
                     .clip(RoundedCornerShape(65.dp))
                     .background(Brush.verticalGradient(
                         if (tx && txAllowed) listOf(Color(0xFFC92A33), Color(0xFF701B30))
-                        else listOf(Color(0xFF174D83), Color(0xFF09203A))))
-                    .border(3.dp, if (tx && txAllowed) Color(0xFFFF5F65) else RadioBlue, RoundedCornerShape(65.dp))
+                        else listOf(skin.pttTop, skin.pttBottom)))
+                    .border(3.dp, if (tx && txAllowed) Color(0xFFFF5F65) else skin.pttRing, RoundedCornerShape(65.dp))
                     .then(if (txAllowed) Modifier.pointerInput(settings.pttToggle, inputMuted) {
                         detectTapGestures(onPress = {
                             if (settings.pttToggle) {
@@ -241,14 +246,14 @@ fun Press2TalkRadioPage(
                     Column(horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.spacedBy(5.dp)) {
                         Icon(if (inputMuted) Icons.Rounded.MicOff else Icons.Rounded.Mic, null,
-                            tint = RadioText, modifier = Modifier.size(if (compact) 33.dp else 44.dp))
+                            tint = skin.text, modifier = Modifier.size(if (compact) 33.dp else 44.dp))
                         Text(when {
                             !connected -> "Verbinden..."
                             inputMuted -> "Microfoon uit"
                             tx -> "ZENDEN • TX"
                             ptt -> "Push to talk"
                             else -> "Luisteren"
-                        }, color = RadioText, fontWeight = FontWeight.Bold,
+                        }, color = skin.text, fontWeight = FontWeight.Bold,
                             fontSize = if (compact) 17.sp else 20.sp)
                     }
                 }
@@ -262,7 +267,7 @@ fun Press2TalkRadioPage(
                             modifier = Modifier.size(23.dp))
                     }
                     Icon(if (outputMuted) Icons.Rounded.Headset else Icons.Rounded.Mic, "Microfoon aan/uit",
-                        tint = if (inputMuted) Ts.Red else RadioDim,
+                        tint = if (inputMuted) Ts.Red else skin.mutedText,
                         modifier = Modifier.size(22.dp).clickable { session.toggleInputMuted() })
                 }
             }
@@ -292,22 +297,22 @@ fun Press2TalkRadioPage(
 }
 
 @Composable
-private fun RadioShortcut(icon: ImageVector, label: String, diameter: Dp, onClick: () -> Unit, notify: Boolean = false) {
+private fun RadioShortcut(icon: ImageVector, label: String, diameter: Dp, onClick: () -> Unit, notify: Boolean = false, skin: RadioSkin) {
     Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(5.dp)) {
         Box(Modifier.size(diameter).clip(CircleShape)
-            .background(Brush.verticalGradient(listOf(Color(0xFF244568), Color(0xFF10253D))))
-            .border(2.dp, Color(0xFF030A13), CircleShape).clickable(onClick = onClick),
+            .background(Brush.verticalGradient(listOf(skin.buttonTop, skin.buttonBottom)))
+            .border(2.dp, skin.buttonOutline, CircleShape).clickable(onClick = onClick),
             contentAlignment = Alignment.Center) {
-            Icon(icon, label, tint = RadioText, modifier = Modifier.size(25.dp))
+            Icon(icon, label, tint = skin.text, modifier = Modifier.size(25.dp))
             if (notify) Box(Modifier.align(Alignment.TopEnd).size(9.dp).background(Ts.Red, CircleShape))
         }
-        Text(label, color = RadioText, fontSize = 9.sp, maxLines = 1)
+        Text(label, color = skin.text, fontSize = 9.sp, maxLines = 1)
     }
 }
 
 /** Animated only while audio is actually being received; no fake signal strength. */
 @Composable
-private fun AudioBars(active: Boolean, width: Dp) {
+private fun AudioBars(active: Boolean, width: Dp, skin: RadioSkin) {
     var beat by remember { mutableStateOf(false) }
     LaunchedEffect(active) {
         beat = false
@@ -323,7 +328,7 @@ private fun AudioBars(active: Boolean, width: Dp) {
             } else 0.12f
             val h = size.height * magnitude
             val x = step * (i + 1)
-            drawLine(color = if (active) RadioBlue else Color(0xFF315779),
+            drawLine(color = if (active) skin.secondary else skin.idleBars,
                 start = androidx.compose.ui.geometry.Offset(x, (size.height - h) / 2f),
                 end = androidx.compose.ui.geometry.Offset(x, (size.height + h) / 2f),
                 strokeWidth = 3.dp.toPx(), cap = StrokeCap.Round)
@@ -331,38 +336,57 @@ private fun AudioBars(active: Boolean, width: Dp) {
     }
 }
 
-/** A lightweight theme preview within the existing settings carousel. */
+/** Live Compose preview of each radio skin within the existing settings carousel. */
 @Composable
-fun Press2TalkThemePreview() {
-    Column(Modifier.fillMaxSize().background(Color(0xFF071529)).padding(10.dp),
-        horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(7.dp)) {
-        Text("DG-Talk", color = RadioText, fontSize = 21.sp, fontWeight = FontWeight.Bold)
+fun Press2TalkThemePreview(themeName: String = "press2talk") {
+    val skin = radioSkin(themeName)
+    Column(
+        Modifier.fillMaxSize()
+            .background(Brush.verticalGradient(listOf(skin.bgTop, skin.bgMiddle, skin.bgBottom)))
+            .padding(10.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(7.dp)
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            if (skin.christmas) Text("🎅", fontSize = 18.sp)
+            Text("DG-Talk", color = skin.text, fontSize = 21.sp, fontWeight = FontWeight.Bold)
+            if (skin.christmas) Text("❄️", fontSize = 17.sp)
+        }
         Box(Modifier.fillMaxWidth().height(35.dp).clip(RoundedCornerShape(9.dp))
-            .background(RadioSurface), contentAlignment = Alignment.Center) {
-            Text("● TS-HEERLEN • Verbonden", color = RadioGreen, fontSize = 10.sp)
+            .background(skin.surface).border(1.dp, skin.outline, RoundedCornerShape(9.dp)),
+            contentAlignment = Alignment.Center
+        ) {
+            Text("● TS-HEERLEN • Verbonden", color = skin.connected, fontSize = 10.sp)
         }
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
             listOf(Icons.Rounded.History, Icons.Rounded.List, Icons.Rounded.People,
                 Icons.Rounded.Bluetooth, Icons.AutoMirrored.Rounded.Chat, Icons.Rounded.Settings).forEach { icon ->
-                Box(Modifier.size(24.dp).background(Color(0xFF234263), CircleShape),
-                    contentAlignment = Alignment.Center) {
-                    Icon(icon, null, tint = RadioText, modifier = Modifier.size(15.dp))
+                Box(Modifier.size(24.dp).background(skin.buttonTop, CircleShape)
+                    .border(1.dp, skin.secondary, CircleShape),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(icon, null, tint = skin.text, modifier = Modifier.size(15.dp))
                 }
             }
         }
         Column(Modifier.fillMaxWidth().weight(1f).clip(RoundedCornerShape(12.dp))
-            .background(RadioSurface).border(1.dp, RadioBlue, RoundedCornerShape(12.dp)),
+            .background(Brush.verticalGradient(listOf(skin.cardTop, skin.cardBottom)))
+            .border(1.dp, skin.cardOutline, RoundedCornerShape(12.dp)),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.SpaceEvenly) {
-            Text("Wie praat er?", fontSize = 15.sp, fontWeight = FontWeight.Bold, color = RadioText)
-            Icon(Icons.Rounded.AccountCircle, null, tint = RadioBlue, modifier = Modifier.size(48.dp))
-            Text("Marcel (Android)", fontSize = 13.sp, color = RadioText)
-            Text("● Spreekt nu...", fontSize = 10.sp, color = RadioGreen)
+            verticalArrangement = Arrangement.SpaceEvenly
+        ) {
+            Text(if (skin.christmas) "🎄 Wie praat er? ❄️" else "Wie praat er?",
+                fontSize = 15.sp, fontWeight = FontWeight.Bold, color = skin.text)
+            Icon(Icons.Rounded.AccountCircle, null, tint = skin.accent, modifier = Modifier.size(48.dp))
+            Text("Actieve spreker", fontSize = 13.sp, color = skin.text)
+            Text("● Spreekt nu...", fontSize = 10.sp, color = skin.connected)
         }
         Box(Modifier.fillMaxWidth().height(44.dp).clip(RoundedCornerShape(24.dp))
-            .background(Color(0xFF174D83)).border(2.dp, RadioBlue, RoundedCornerShape(24.dp)),
-            contentAlignment = Alignment.Center) {
-            Text("🎙 Push to talk", color = RadioText, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+            .background(Brush.verticalGradient(listOf(skin.pttTop, skin.pttBottom)))
+            .border(2.dp, skin.pttRing, RoundedCornerShape(24.dp)),
+            contentAlignment = Alignment.Center
+        ) {
+            Text("🎙 Push to talk", color = skin.text, fontSize = 14.sp, fontWeight = FontWeight.Bold)
         }
     }
 }
