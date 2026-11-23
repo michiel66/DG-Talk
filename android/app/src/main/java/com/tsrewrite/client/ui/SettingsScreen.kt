@@ -110,8 +110,8 @@ fun SettingsPage(store: Store, session: Session, onBack: () -> Unit) {
 
             Card("1. Thema kiezen") {
                 Hint("Schuif door de voorbeeldafbeeldingen. De app begint met het standaardthema.")
-                val ids = listOf("standard", "christmas", "27mc", "space", "press2talk")
-                val names = listOf("Standaard", "Kerst", "27MC", "Space", "Press2Talk Pro")
+                val ids = listOf("standard", "christmas", "27mc", "space", "press2talk", "responder", "cyber", "christmasradio")
+                val names = listOf("Standaard", "Kerst", "27MC", "Space", "App 2 • Press2Talk Pro (blauw)", "App 3 • Responder Pro (rood)", "App 4 • Cyber Radio (paars/cyaan)", "App 5 • Kerst Radio")
                 val previews = listOf(
                     com.tsrewrite.client.R.drawable.dg_theme_standard_preview,
                     com.tsrewrite.client.R.drawable.dg_theme_christmas_preview,
@@ -134,8 +134,8 @@ fun SettingsPage(store: Store, session: Session, onBack: () -> Unit) {
                             .border(2.dp, if (pager.currentPage == ix) Ts.Blue else Ts.Outline, RoundedCornerShape(18.dp)),
                         contentAlignment = Alignment.Center
                     ) {
-                        if (ids[ix] == "press2talk") {
-                            Box(Modifier.height(246.dp).padding(4.dp)) { Press2TalkThemePreview() }
+                        if (ids[ix] in listOf("press2talk", "responder", "cyber", "christmasradio")) {
+                            Box(Modifier.height(246.dp).padding(4.dp)) { Press2TalkThemePreview(ids[ix]) }
                         } else {
                         Image(
                             painter = androidx.compose.ui.res.painterResource(previews[ix]),
@@ -159,7 +159,7 @@ fun SettingsPage(store: Store, session: Session, onBack: () -> Unit) {
                     enabled = s.dgTheme != ids[pager.currentPage],
                     modifier = Modifier.fillMaxWidth()
                 ) { Text(if (s.dgTheme == ids[pager.currentPage]) "Geselecteerd" else "Thema toepassen") }
-                Hint("Press2Talk Pro heeft een eigen radiodashboard. De andere thema’s behouden hun bestaande bediening; TeamSpeak en instellingen blijven ongewijzigd.")
+                Hint("App 2, 3, 4 en 5 gebruiken hetzelfde radiodashboard met eigen kleuren en versiering. De overige thema’s, TeamSpeak en alle instellingen blijven ongewijzigd.")
             }
 
             Card("2. Externe PTT-knop") {
