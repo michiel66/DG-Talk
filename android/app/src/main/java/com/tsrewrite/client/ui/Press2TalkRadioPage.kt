@@ -3,6 +3,7 @@ package com.tsrewrite.client.ui
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -317,8 +318,8 @@ private fun AudioBars(active: Boolean, width: Dp) {
         val step = size.width / (count + 1)
         for (i in 0 until count) {
             val magnitude = if (active) {
-                (if (beat) intArrayOf(0.25f, 0.50f, 0.80f, 1f, 0.72f, 0.48f, 0.26f)
-                 else intArrayOf(0.52f, 0.30f, 0.65f, 0.85f, 1f, 0.60f, 0.30f))[i]
+                (if (beat) floatArrayOf(0.25f, 0.50f, 0.80f, 1f, 0.72f, 0.48f, 0.26f)
+                 else floatArrayOf(0.52f, 0.30f, 0.65f, 0.85f, 1f, 0.60f, 0.30f))[i]
             } else 0.12f
             val h = size.height * magnitude
             val x = step * (i + 1)
