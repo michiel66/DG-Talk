@@ -69,6 +69,30 @@ object Ts {
                 Yellow = Color(0xFFFFCF66); Orange = Color(0xFFF8A55D)
                 Purple = Color(0xFFAB87FB); Selection = Color(0x3339B7FF)
             }
+            "responder" -> {
+                Blue = Color(0xFFFF334A); BlueDim = Color(0xFFAF1830)
+                Bg = Color(0xFF090B10); Surface = Color(0xFF20131A)
+                SurfaceHigh = Color(0xFF341925); SurfaceHighest = Color(0xFF442533)
+                Outline = Color(0xFF913342); Green = Color(0xFF45E87C)
+                Yellow = Color(0xFFFFCE69); Orange = Color(0xFFFF7965)
+                Purple = Color(0xFFCF74BC); Selection = Color(0x33FF334A)
+            }
+            "cyber" -> {
+                Blue = Color(0xFFC84BFF); BlueDim = Color(0xFF7B3AC7)
+                Bg = Color(0xFF08091E); Surface = Color(0xFF18142E)
+                SurfaceHigh = Color(0xFF2D1F50); SurfaceHighest = Color(0xFF263B62)
+                Outline = Color(0xFF7751BB); Green = Color(0xFF29F5B0)
+                Yellow = Color(0xFFFFD76B); Orange = Color(0xFFFF8EBF)
+                Purple = Color(0xFF1BE3FF); Selection = Color(0x33C84BFF)
+            }
+            "christmasradio" -> {
+                Blue = Color(0xFFFFCB5F); BlueDim = Color(0xFFB97028)
+                Bg = Color(0xFF190915); Surface = Color(0xFF451529)
+                SurfaceHigh = Color(0xFF611A34); SurfaceHighest = Color(0xFF792A3F)
+                Outline = Color(0xFFC96D58); Green = Color(0xFF53E992)
+                Yellow = Color(0xFFFFE496); Orange = Color(0xFFFF8D68)
+                Purple = Color(0xFFFF8CBD); Selection = Color(0x33FFCB5F)
+            }
             "space" -> {
                 Blue = Color(0xFF36CEFA); BlueDim = Color(0xFF1585BA)
                 Bg = Color(0xFF080D25); Surface = Color(0xFF141B39)
