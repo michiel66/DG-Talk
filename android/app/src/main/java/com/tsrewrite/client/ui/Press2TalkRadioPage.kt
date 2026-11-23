@@ -19,7 +19,6 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
-import androidx.compose.foundation.layout.weight
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -122,7 +121,7 @@ fun Press2TalkRadioPage(
     val speaking = activeClient != null
     val myName = server?.clients?.firstOrNull { it.id == server?.ownClientId }?.name ?: "DG-Talk"
     val name = activeClient?.name ?: "Niemand spreekt"
-    val channelName = server?.channels?.firstOrNull { it.id == ownChannel }?.name?.let(TsText::of) ?: "Kanaal laden..."
+    val channelName = server?.channels?.firstOrNull { it.id == ownChannel }?.name ?: "Kanaal laden..."
     val connected = status.first == Status.CONNECTED && server != null
     val ptt = settings.voiceMode == VoiceMode.PUSH_TO_TALK || whisper != null
     val tx = pressed || toggled || (server?.ownClientId?.let { talking.containsKey(it) } == true)
@@ -155,7 +154,7 @@ fun Press2TalkRadioPage(
                 verticalAlignment = Alignment.CenterVertically) {
                 Icon(Icons.Rounded.Headset, null, tint = RadioBlue, modifier = Modifier.size(32.dp))
                 Column(Modifier.weight(1f).padding(start = 12.dp)) {
-                    Text(server?.name?.let(TsText::of) ?: "TS-HEERLEN",
+                    Text(TsText.of(server?.name ?: "TS-HEERLEN"),
                         color = RadioText, fontWeight = FontWeight.Bold, maxLines = 1,
                         overflow = TextOverflow.Ellipsis, fontSize = if (compact) 17.sp else 20.sp)
                     Text((if (connected) "● Verbonden" else "● Verbinden...") +
