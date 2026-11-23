@@ -253,7 +253,7 @@ class Store(private val context: Context) {
             volumeKeyPtt = o.optBoolean("volumeKeyPtt", d.volumeKeyPtt),
             headsetButtonPtt = o.optBoolean("headsetButtonPtt", d.headsetButtonPtt),
             pttToggle = o.optBoolean("pttToggle", d.pttToggle),
-            dgTheme = o.optString("dgTheme", d.dgTheme).takeIf { it in listOf("standard", "christmas", "27mc", "space") } ?: "standard",
+            dgTheme = o.optString("dgTheme", d.dgTheme).takeIf { it in listOf("standard", "christmas", "27mc", "space", "press2talk") } ?: "standard",
             externalPttEnabled = o.optBoolean("externalPttEnabled", d.externalPttEnabled),
             externalPttKeyCode = o.optInt("externalPttKeyCode", d.externalPttKeyCode),
             rogerBeep = o.optBoolean("rogerBeep", d.rogerBeep),
