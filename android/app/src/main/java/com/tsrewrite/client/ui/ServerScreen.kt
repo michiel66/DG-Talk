@@ -172,7 +172,7 @@ private fun TreePage(session: Session, store: Store, badgeStore: com.tsrewrite.c
     var awayPrompt by remember { mutableStateOf(false) }
     var showClassicTree by remember(settings.dgTheme) { mutableStateOf(false) }
 
-    if (settings.dgTheme == "press2talk" && !showClassicTree) {
+    if (settings.dgTheme in listOf("press2talk", "responder", "cyber", "christmasradio") && !showClassicTree) {
         Press2TalkRadioPage(
             session = session,
             store = store,
@@ -191,7 +191,7 @@ private fun TreePage(session: Session, store: Store, badgeStore: com.tsrewrite.c
         bottomBar = { VoiceDock(session, store) },
     ) { pad ->
         Column(Modifier.padding(pad).fillMaxSize()) {
-            if (settings.dgTheme == "press2talk") {
+            if (settings.dgTheme in listOf("press2talk", "responder", "cyber", "christmasradio")) {
                 Row(Modifier.fillMaxWidth().background(Ts.SurfaceHigh)
                     .clickable { showClassicTree = false }.padding(horizontal = 16.dp, vertical = 10.dp),
                     verticalAlignment = Alignment.CenterVertically) {
